@@ -1,0 +1,66 @@
+{
+  "name": "chord-arc",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  },
+  "scripts": {
+    "account": "yarn hardhat:account",
+    "account:generate": "yarn workspace @chord/hardhat account:generate",
+    "account:import": "yarn workspace @chord/hardhat account:import",
+    "account:reveal-pk": "yarn workspace @chord/hardhat account:reveal-pk",
+    "chain": "yarn hardhat:chain",
+    "compile": "yarn hardhat:compile",
+    "deploy": "yarn hardhat:deploy",
+    "fork": "yarn hardhat:fork",
+    "format": "yarn next:format && yarn hardhat:format",
+    "generate": "yarn account:generate",
+    "hardhat:account": "yarn workspace @chord/hardhat account",
+    "hardhat:chain": "yarn workspace @chord/hardhat chain",
+    "hardhat:check-types": "yarn workspace @chord/hardhat check-types",
+    "hardhat:clean": "yarn workspace @chord/hardhat clean",
+    "hardhat:compile": "yarn workspace @chord/hardhat compile",
+    "hardhat:deploy": "yarn workspace @chord/hardhat deploy",
+    "hardhat:flatten": "yarn workspace @chord/hardhat flatten",
+    "hardhat:fork": "yarn workspace @chord/hardhat fork",
+    "hardhat:format": "yarn workspace @chord/hardhat format",
+    "hardhat:generate": "yarn workspace @chord/hardhat generate",
+    "hardhat:hardhat-verify": "yarn workspace @chord/hardhat hardhat-verify",
+    "hardhat:lint": "yarn workspace @chord/hardhat lint",
+    "hardhat:lint-staged": "yarn workspace @chord/hardhat lint-staged",
+    "hardhat:test": "yarn workspace @chord/hardhat test",
+    "hardhat:verify": "yarn workspace @chord/hardhat verify",
+    "ipfs": "yarn workspace @chord/nextjs ipfs",
+    "lint": "yarn next:lint && yarn hardhat:lint",
+    "next:build": "yarn workspace @chord/nextjs build",
+    "next:check-types": "yarn workspace @chord/nextjs check-types",
+    "next:format": "yarn workspace @chord/nextjs format",
+    "next:lint": "yarn workspace @chord/nextjs lint",
+    "next:serve": "yarn workspace @chord/nextjs serve",
+    "precommit": "lint-staged",
+    "start": "yarn workspace @chord/nextjs dev",
+    "start:ai": "infisical run --env=dev --recursive -- yarn workspace @chord/nextjs dev",
+    "daemon": "yarn workspace @chord/daemon dev",
+    "daemon:start": "yarn workspace @chord/daemon start",
+    "daemon:check-types": "yarn workspace @chord/daemon check-types",
+    "test": "yarn hardhat:test",
+    "vercel": "yarn workspace @chord/nextjs vercel",
+    "vercel:login": "yarn workspace @chord/nextjs vercel:login",
+    "vercel:yolo": "yarn workspace @chord/nextjs vercel:yolo",
+    "verify": "yarn hardhat:verify"
+  },
+  "devDependencies": {
+    "husky": "~9.1.6",
+    "lint-staged": "~13.2.2"
+  },
+  "packageManager": "yarn@3.2.3",
+  "engines": {
+    "node": ">=20.18.3"
+  },
+  "dependencies": {
+    "vercel": "latest"
+  }
+}

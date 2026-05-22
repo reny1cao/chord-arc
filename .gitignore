@@ -1,0 +1,42 @@
+# dependencies
+node_modules
+
+# yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# eslint
+.eslintcache
+
+# misc
+.DS_Store
+
+# IDE
+.vscode
+.idea
+
+# cli
+dist
+.vercel
+
+# hardhat
+packages/hardhat/artifacts
+packages/hardhat/cache
+packages/hardhat/typechain-types
+packages/hardhat/coverage
+packages/hardhat/coverage.json
+
+# chord daemon working dir + sqlite
+.chord/
+*.sqlite
+*.sqlite-journal
+
+# secrets
+.env
+.env.local
+.env.*.local
+.infisical-secrets.json
