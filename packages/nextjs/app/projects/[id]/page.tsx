@@ -5,13 +5,13 @@ import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { Address } from "@scaffold-ui/components";
 import type { NextPage } from "next";
-import { formatEther } from "viem";
+import { formatUnits } from "viem";
 import { hardhat } from "viem/chains";
 import { MilestoneStatus, StatusBadge } from "~~/components/escrow/StatusBadge";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { useNativeCurrency } from "~~/hooks/useNativeCurrency";
 import { getRoleColor, getRoleLabel, useProjectRole } from "~~/hooks/useProjectRole";
+import { USDC_DECIMALS } from "~~/utils/erc20";
 
 // Dynamic import for heavy component (418 lines) - only loads when needed
 const ApprovalActions = dynamic(
@@ -58,7 +58,6 @@ const ProjectDetailPage: NextPage = () => {
   const router = useRouter();
   const projectId = Number(params.id);
   const { targetNetwork } = useTargetNetwork();
-  const { symbol: currencySymbol } = useNativeCurrency();
 
   const {
     data: projectData,
@@ -245,21 +244,21 @@ const ProjectDetailPage: NextPage = () => {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                 <div className="text-center p-3 bg-base-200 rounded-lg">
-                  <p className="text-2xl font-bold">{formatEther(project.totalAmount)}</p>
-                  <p className="text-xs opacity-70">Total {currencySymbol}</p>
+                  <p className="text-2xl font-bold">{formatUnits(project.totalAmount, USDC_DECIMALS)}</p>
+                  <p className="text-xs opacity-70">Total USDC</p>
                 </div>
                 <div className="text-center p-3 bg-base-200 rounded-lg">
-                  <p className="text-2xl font-bold">{formatEther(project.totalPaid)}</p>
-                  <p className="text-xs opacity-70">Paid {currencySymbol}</p>
+                  <p className="text-2xl font-bold">{formatUnits(project.totalPaid, USDC_DECIMALS)}</p>
+                  <p className="text-xs opacity-70">Paid USDC</p>
                 </div>
                 <div className="text-center p-3 bg-base-200 rounded-lg">
-                  <p className="text-2xl font-bold">{formatEther(stats.remainingAmount)}</p>
-                  <p className="text-xs opacity-70">Remaining {currencySymbol}</p>
+                  <p className="text-2xl font-bold">{formatUnits(stats.remainingAmount, USDC_DECIMALS)}</p>
+                  <p className="text-xs opacity-70">Remaining USDC</p>
                 </div>
                 {project.pm !== ZERO_ADDRESS && (
                   <div className="text-center p-3 bg-base-200 rounded-lg">
-                    <p className="text-2xl font-bold">{formatEther(project.totalPmFees)}</p>
-                    <p className="text-xs opacity-70">PM Fees {currencySymbol}</p>
+                    <p className="text-2xl font-bold">{formatUnits(project.totalPmFees, USDC_DECIMALS)}</p>
+                    <p className="text-xs opacity-70">PM Fees USDC</p>
                   </div>
                 )}
               </div>
@@ -316,12 +315,11 @@ const ProjectDetailPage: NextPage = () => {
                           </div>
                           <div>
                             <h3 className="font-semibold">{description}</h3>
-                            <p className="text-sm opacity-70">
-                              {formatEther(amount)} {currencySymbol}
-                            </p>
+                            <p className="text-sm opacity-70">{formatUnits(amount, USDC_DECIMALS)} USDC</p>
                             {project.pm !== ZERO_ADDRESS && (
                               <p className="text-xs opacity-50">
-                                PM fee: {formatEther((amount * project.pmFeeBps) / 10000n)} ETH ({pmFeePercent}%)
+                                PM fee: {formatUnits((amount * project.pmFeeBps) / 10000n, USDC_DECIMALS)} USDC (
+                                {pmFeePercent}%)
                               </p>
                             )}
                             {/* Assignee info */}
@@ -457,9 +455,7 @@ const ProjectDetailPage: NextPage = () => {
                 </div>
                 <div className="stat">
                   <div className="stat-title">Paid Out</div>
-                  <div className="stat-value text-lg">
-                    {formatEther(project.totalPaid)} {currencySymbol}
-                  </div>
+                  <div className="stat-value text-lg">{formatUnits(project.totalPaid, USDC_DECIMALS)} USDC</div>
                 </div>
               </div>
             </div>

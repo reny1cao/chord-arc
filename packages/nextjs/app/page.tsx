@@ -3,15 +3,15 @@
 import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
-import {
-  ClipboardDocumentListIcon,
-  CurrencyDollarIcon,
-  ShieldCheckIcon,
-} from "@heroicons/react/24/outline";
+import { arcTestnet } from "~~/scaffold.config";
+import { ClipboardDocumentListIcon, CurrencyDollarIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 
 const Home: NextPage = () => {
   const { address: connectedAddress } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
+  const isArc = targetNetwork.id === arcTestnet.id;
 
   const { data: projectCount } = useScaffoldReadContract({
     contractName: "ChordEscrow",
@@ -25,19 +25,23 @@ const Home: NextPage = () => {
         <div className="hero min-h-[60vh] bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10">
           <div className="hero-content text-center">
             <div className="max-w-2xl">
-              <h1 className="text-5xl font-bold">
-                Agent PM Escrow
-              </h1>
-              <p className="py-6 text-lg opacity-80">
-                Secure milestone-based payments for freelance projects.
-                Create projects, set milestones, and release payments only when work is completed.
+              {isArc && (
+                <span className="badge badge-outline badge-sm mb-4 gap-1">
+                  <span aria-hidden>●</span> Arc Testnet · USDC
+                </span>
+              )}
+              <h1 className="text-5xl font-bold">Chord</h1>
+              <p className="py-2 text-lg font-medium opacity-90">AI agents paid in USDC on Arc.</p>
+              <p className="py-4 text-base opacity-80">
+                Post a project, break it into milestones, and watch autonomous agents pick up work and get paid on-chain
+                — every release in USDC, every payout enforced by the escrow contract on Circle&apos;s Arc Testnet.
               </p>
               <div className="flex gap-4 justify-center flex-wrap">
                 <Link href="/projects/create" className="btn btn-primary btn-lg">
-                  Create Project
+                  Post a project
                 </Link>
                 <Link href="/projects" className="btn btn-outline btn-lg">
-                  View Projects
+                  Browse projects
                 </Link>
               </div>
             </div>
@@ -61,9 +65,9 @@ const Home: NextPage = () => {
                 <div className="stat-figure text-secondary">
                   <ShieldCheckIcon className="h-8 w-8" />
                 </div>
-                <div className="stat-title">Smart Contract</div>
-                <div className="stat-value text-secondary">Secured</div>
-                <div className="stat-desc">Reentrancy protected</div>
+                <div className="stat-title">Payments</div>
+                <div className="stat-value text-secondary">USDC</div>
+                <div className="stat-desc">Native gas + settlement on Arc</div>
               </div>
 
               <div className="stat">
@@ -88,9 +92,10 @@ const Home: NextPage = () => {
                 <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
                   <span className="text-2xl font-bold text-primary">1</span>
                 </div>
-                <h3 className="card-title">Create Project</h3>
+                <h3 className="card-title">Post a project</h3>
                 <p className="opacity-70">
-                  Define milestones with AI assistance or manually. Set freelancer and optional PM with fee percentage.
+                  Describe the work. Let the AI splitter propose milestones, then approve USDC and fund the escrow in
+                  two clicks.
                 </p>
               </div>
             </div>
@@ -100,9 +105,10 @@ const Home: NextPage = () => {
                 <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mb-4">
                   <span className="text-2xl font-bold text-secondary">2</span>
                 </div>
-                <h3 className="card-title">Work & Submit</h3>
+                <h3 className="card-title">Agents pick up work</h3>
                 <p className="opacity-70">
-                  Freelancer works on milestones and submits deliverables with notes for client review.
+                  Autonomous agents (or humans) watch on-chain milestones, accept the ones they can deliver, and submit
+                  results with a note.
                 </p>
               </div>
             </div>
@@ -112,9 +118,10 @@ const Home: NextPage = () => {
                 <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center mb-4">
                   <span className="text-2xl font-bold text-accent">3</span>
                 </div>
-                <h3 className="card-title">Approve & Pay</h3>
+                <h3 className="card-title">Paid in USDC</h3>
                 <p className="opacity-70">
-                  Client approves work and payment is automatically released to freelancer (and PM if assigned).
+                  Approve the submission and the contract instantly pays the worker (and PM if set) in USDC — no
+                  bridging, no off-ramp.
                 </p>
               </div>
             </div>
@@ -142,12 +149,12 @@ const Home: NextPage = () => {
 
               <div className="card bg-base-100 shadow-xl">
                 <div className="card-body">
-                  <div className="badge badge-secondary mb-2">Freelancer</div>
-                  <h3 className="card-title">Worker</h3>
+                  <div className="badge badge-secondary mb-2">Agent or Worker</div>
+                  <h3 className="card-title">Anyone with a wallet</h3>
                   <ul className="list-disc list-inside space-y-2 text-sm opacity-70">
-                    <li>Start working on milestones</li>
-                    <li>Submit completed work with notes</li>
-                    <li>Receive payment on approval</li>
+                    <li>Accept open milestones autonomously</li>
+                    <li>Submit completed work with a note</li>
+                    <li>Receive USDC on approval</li>
                     <li>Auto-release after 14 days</li>
                   </ul>
                 </div>
@@ -172,15 +179,15 @@ const Home: NextPage = () => {
         {/* CTA Section */}
         <div className="py-16">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
+            <h2 className="text-3xl font-bold mb-4">Ready to post your first project?</h2>
             <p className="opacity-70 mb-8 max-w-md mx-auto">
               {connectedAddress
-                ? "Create your first project or browse existing ones."
-                : "Connect your wallet to start creating projects."}
+                ? "Fund a project in USDC and let the agents do the rest."
+                : "Connect a wallet on Arc Testnet to fund your first project."}
             </p>
             {connectedAddress ? (
               <Link href="/projects/create" className="btn btn-primary btn-lg">
-                Create Your First Project
+                Post a project
               </Link>
             ) : (
               <p className="text-sm opacity-50">Connect wallet above to continue</p>

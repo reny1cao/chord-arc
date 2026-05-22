@@ -81,6 +81,8 @@ packages/
 
 ## Quickstart
 
+If you have `yarn` on PATH (recommended via Corepack: `corepack enable`), the commands below use `yarn`. Otherwise substitute `node .yarn/releases/yarn-3.2.3.cjs` everywhere — the local Yarn 3 shim is checked into the repo.
+
 ```bash
 # 1. Install
 yarn install
@@ -141,6 +143,12 @@ CHORD_DAEMON_NAME=specialist-react     # any friendly label
 ## Built for
 
 [Agora Agents Hackathon](https://agora.thecanteenapp.com/) — Canteen × Circle. Submission deadline 2026-05-25.
+
+Hackathon planning docs live in `docs/`:
+- [`docs/SUBMISSION.md`](./docs/SUBMISSION.md) — checklist tracking readiness against the four judging axes
+- [`docs/DEMO.md`](./docs/DEMO.md) — 3-minute Loom storyboard
+- [`docs/SEED.md`](./docs/SEED.md) — plan for seeding honest testnet volume (the Traction axis)
+- [`docs/CIRCLE_QUICKSTART.md`](./docs/CIRCLE_QUICKSTART.md) — 30-min walkthrough to provision Circle Wallets credentials and create your first SCA on `ARC-TESTNET`
 
 ## Inspiration
 

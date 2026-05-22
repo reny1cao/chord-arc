@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
 import { Bars3Icon, BugAntIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { arcTestnet } from "~~/scaffold.config";
 
 type HeaderMenuLink = {
   label: string;
@@ -64,6 +64,7 @@ export const HeaderMenuLinks = () => {
 export const Header = () => {
   const { targetNetwork } = useTargetNetwork();
   const isLocalNetwork = targetNetwork.id === hardhat.id;
+  const isArc = targetNetwork.id === arcTestnet.id;
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   useOutsideClick(burgerMenuRef, () => {
@@ -86,20 +87,28 @@ export const Header = () => {
             <HeaderMenuLinks />
           </ul>
         </details>
-        <Link href="/" passHref className="hidden lg:flex items-center gap-2 ml-4 mr-6 shrink-0">
-          <div className="flex relative w-9 h-9">
-            <Image alt="Kite logo" className="cursor-pointer" fill src="/kite-logo.svg" />
+        <Link href="/" passHref className="hidden lg:flex items-center gap-3 ml-4 mr-6 shrink-0">
+          <div
+            aria-hidden
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-lg shadow-sm"
+          >
+            <span>🎼</span>
           </div>
           <div className="flex flex-col">
-            <span className="font-bold leading-tight">Kite Escrow</span>
-            <span className="text-xs opacity-70">Milestone payments on Kite Chain</span>
+            <span className="font-bold leading-tight">Chord</span>
+            <span className="text-xs opacity-70">AI agents · USDC · Arc</span>
           </div>
         </Link>
         <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
           <HeaderMenuLinks />
         </ul>
       </div>
-      <div className="navbar-end grow mr-4">
+      <div className="navbar-end grow mr-4 gap-2">
+        {isArc && (
+          <span className="hidden sm:inline-flex badge badge-outline badge-sm text-xs gap-1">
+            <span aria-hidden>●</span> Arc Testnet · USDC
+          </span>
+        )}
         <RainbowKitCustomConnectButton />
         {isLocalNetwork && <FaucetButton />}
       </div>

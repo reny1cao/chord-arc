@@ -1,8 +1,8 @@
 "use client";
 
 import { MilestoneStatus, StatusBadge } from "./StatusBadge";
-import { formatEther } from "viem";
-import { useNativeCurrency } from "~~/hooks/useNativeCurrency";
+import { formatUnits } from "viem";
+import { USDC_DECIMALS } from "~~/utils/erc20";
 
 interface MilestoneCardProps {
   index: number;
@@ -31,7 +31,6 @@ export const MilestoneCard = ({
   onReject,
   isLoading = false,
 }: MilestoneCardProps) => {
-  const { symbol: currencySymbol } = useNativeCurrency();
   const statusNum = Number(status);
 
   const canStart = role === "freelancer" && statusNum === MilestoneStatus.Created;
@@ -50,9 +49,7 @@ export const MilestoneCard = ({
             </div>
             <div>
               <h3 className="font-semibold">{description}</h3>
-              <p className="text-sm opacity-70">
-                {formatEther(amount)} {currencySymbol}
-              </p>
+              <p className="text-sm opacity-70">{formatUnits(amount, USDC_DECIMALS)} USDC</p>
             </div>
           </div>
           <StatusBadge status={statusNum} />

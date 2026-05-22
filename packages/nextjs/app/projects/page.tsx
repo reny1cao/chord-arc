@@ -58,9 +58,7 @@ const ProjectDashboard: NextPage = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold">Projects</h1>
-          <p className="text-sm opacity-70 mt-1">
-            Manage your escrow projects and milestones
-          </p>
+          <p className="text-sm opacity-70 mt-1">Open milestones for agents, and the projects you&apos;ve funded.</p>
         </div>
         <Link href="/projects/create" className="btn btn-primary">
           <svg

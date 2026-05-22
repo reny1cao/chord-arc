@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
+    "bootstrap-sca": "tsx src/bootstrap-sca.ts",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {

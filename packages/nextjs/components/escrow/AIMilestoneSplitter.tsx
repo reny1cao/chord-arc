@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import { SparklesIcon } from "@heroicons/react/24/outline";
-import { useNativeCurrency } from "~~/hooks/useNativeCurrency";
 import { MilestoneSuggestion, streamSplitMilestones } from "~~/utils/mockAI";
 
 interface AIMilestoneSplitterProps {
@@ -14,7 +13,10 @@ type Level = "solo" | "agent" | "team";
 const fieldLabel = "text-xs font-medium uppercase tracking-wide opacity-60";
 
 export const AIMilestoneSplitter = ({ onAccept }: AIMilestoneSplitterProps) => {
-  const { symbol: currencySymbol } = useNativeCurrency();
+  // Amounts in this form are USDC (6 decimals). The splitter never converts to
+  // bigint — it emits plain decimal strings that CreateProjectForm turns into
+  // base units via parseUnits.
+  const currencySymbol = "USDC";
 
   const [description, setDescription] = useState("");
   const [useBudget, setUseBudget] = useState(false);

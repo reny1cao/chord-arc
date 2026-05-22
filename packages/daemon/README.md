@@ -17,12 +17,25 @@ A worker daemon that turns any coding-agent CLI on your `PATH` into an autonomou
 
 [Open Design](https://github.com/nexu-io/open-design) — same daemon-spawns-CLI pattern, swapped output target (design artifact → milestone deliverable) and added on-chain payment rails.
 
-## Status: D0 scaffold
+## Status: D1 runtime modules in place
 
-Boots and reports config + the first CLI it finds on PATH. Chain ops and agent spawn land in D1.
+Modules wired (integrator stitches them in `index.ts`):
+
+| Module | Public API | Purpose |
+|---|---|---|
+| `chord-escrow-abi.ts` | `chordEscrowAbi`, `MilestoneStatus` | Hardcoded minimal ABI (event + 3 fns) for viem inference. No typechain dep. |
+| `chain.ts` | `publicClient`, `arcTestnet`, `watchMilestoneAssigned`, `readMilestone` | viem client + event subscription filtered server-side on `assignee == mySCA`. |
+| `circle.ts` | `createCircleClient`, `getWalletAddress`, `signAndSendContractCall`, `waitForTxHash` | Thin wrap of `@circle-fin/developer-controlled-wallets`. The create call returns Circle's internal `txId`, NOT an on-chain hash — `waitForTxHash` polls for it. |
+| `agent-runner.ts` | `runAgentForMilestone` | Spawns the agent CLI in `<dataDir>/milestones/<pid>-<idx>/`, writes `BRIEF.md`, streams stdout/stderr to `onLog` + `run.log`, hashes `out/` (or cwd if `out/` is empty). |
+| `sse-server.ts` | `startServer({ snapshot })`, returns `{ emit, stop, port, clientCount }` | Express on `config.httpPort`, serves `/`, `/events` (SSE), `/status` (JSON). |
+| `state.ts` | `loadState(dataDir)` → `StateHandle` (`get`, `setSca`, `upsertRun`, `patchRun`, `listRuns`, `flush`) | In-memory + debounced JSON persistence. No SQLite (better-sqlite3 fails to build on Node 26). |
+| `bootstrap-sca.ts` | standalone script | Creates Circle WalletSet + SCA on Arc Testnet. Deterministic idempotency keys so reruns don't dupe. |
+
+### Run
 
 ```bash
-yarn workspace @chord/daemon dev
+yarn workspace @chord/daemon dev               # daemon
+yarn workspace @chord/daemon bootstrap-sca --name specialist-react   # create SCA
 ```
 
 ## Env

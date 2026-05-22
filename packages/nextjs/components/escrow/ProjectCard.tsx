@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { Address } from "@scaffold-ui/components";
-import { formatEther } from "viem";
-import { useNativeCurrency } from "~~/hooks/useNativeCurrency";
+import { formatUnits } from "viem";
 import { ProjectRole, getRoleColor, getRoleLabel } from "~~/hooks/useProjectRole";
+import { USDC_DECIMALS } from "~~/utils/erc20";
 
 interface ProjectCardProps {
   projectId: number;
@@ -34,7 +34,6 @@ export const ProjectCard = ({
   role,
 }: ProjectCardProps) => {
   const router = useRouter();
-  const { symbol: currencySymbol } = useNativeCurrency();
   const progressPercent = milestoneCount > 0 ? (completedMilestones / milestoneCount) * 100 : 0;
   const remainingAmount = totalAmount - totalPaid;
   const unassignedCount = milestoneCount - assignedMilestones - completedMilestones;
@@ -92,15 +91,11 @@ export const ProjectCard = ({
         <div className="mt-4 grid grid-cols-2 gap-4">
           <div className="rounded-lg bg-base-200 p-3">
             <p className="text-xs opacity-70">Total Value</p>
-            <p className="font-bold">
-              {formatEther(totalAmount)} {currencySymbol}
-            </p>
+            <p className="font-bold">{formatUnits(totalAmount, USDC_DECIMALS)} USDC</p>
           </div>
           <div className="rounded-lg bg-base-200 p-3">
             <p className="text-xs opacity-70">Remaining</p>
-            <p className="font-bold">
-              {formatEther(remainingAmount)} {currencySymbol}
-            </p>
+            <p className="font-bold">{formatUnits(remainingAmount, USDC_DECIMALS)} USDC</p>
           </div>
         </div>
       </div>

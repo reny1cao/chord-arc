@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AIMilestoneSplitter } from "./AIMilestoneSplitter";
-import { isAddress, parseEther } from "viem";
-import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { useNativeCurrency } from "~~/hooks/useNativeCurrency";
+import { formatUnits, isAddress, parseUnits } from "viem";
+import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth/useDeployedContractInfo";
+import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth/useScaffoldWriteContract";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { ARC_USDC_ADDRESS, arcTestnet } from "~~/scaffold.config";
+import { ERC20_ABI, USDC_DECIMALS } from "~~/utils/erc20";
 import type { MilestoneSuggestion } from "~~/utils/mockAI";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -15,16 +19,82 @@ interface MilestoneInput {
   assignee: string; // Optional initial assignee
 }
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+const ARCSCAN_TX = "https://testnet.arcscan.app/tx";
+
+/** Safe parse — returns 0n on bad input so we never crash on partially-typed amounts. */
+const safeParseUsdc = (raw: string): bigint => {
+  try {
+    if (!raw) return 0n;
+    return parseUnits(raw, USDC_DECIMALS);
+  } catch {
+    return 0n;
+  }
+};
+
 export const CreateProjectForm = () => {
   const router = useRouter();
-  const { symbol: currencySymbol } = useNativeCurrency();
+  const { address: connectedAddress } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
+  const isArc = targetNetwork.id === arcTestnet.id;
+
   const [step, setStep] = useState(1);
   const [milestones, setMilestones] = useState<MilestoneInput[]>([]);
   const [pmAddress, setPmAddress] = useState("");
   const [pmFeeBps, setPmFeeBps] = useState("500"); // 5% default
   const [showAssignees, setShowAssignees] = useState(false);
+  const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | null>(null);
+  const [createTxHash, setCreateTxHash] = useState<`0x${string}` | null>(null);
 
-  const { writeContractAsync, isMining } = useScaffoldWriteContract({ contractName: "ChordEscrow" });
+  // Resolve the deployed ChordEscrow address from the SE-2 registry.
+  const { data: escrowContract } = useDeployedContractInfo({ contractName: "ChordEscrow" });
+  const escrowAddress = escrowContract?.address as `0x${string}` | undefined;
+  const isEscrowDeployed = !!escrowAddress && escrowAddress !== ZERO_ADDRESS;
+
+  // Total amount in USDC base units (6 decimals).
+  const totalUsdc = useMemo(
+    () => milestones.reduce<bigint>((sum, m) => sum + safeParseUsdc(m.amount), 0n),
+    [milestones],
+  );
+  const totalUsdcDisplay = useMemo(() => formatUnits(totalUsdc, USDC_DECIMALS), [totalUsdc]);
+
+  // Read current USDC allowance for the escrow.
+  const {
+    data: allowance,
+    refetch: refetchAllowance,
+    isLoading: isLoadingAllowance,
+  } = useReadContract({
+    address: ARC_USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "allowance",
+    args: connectedAddress && escrowAddress ? [connectedAddress, escrowAddress] : undefined,
+    query: { enabled: Boolean(connectedAddress && escrowAddress) },
+  });
+
+  // Wagmi writers — one for the ERC-20 approve, one (via SE-2) for createProject.
+  const { writeContractAsync: writeApprove, isPending: isApproving } = useWriteContract();
+  const { writeContractAsync: writeEscrow, isMining: isCreating } = useScaffoldWriteContract({
+    contractName: "ChordEscrow",
+  });
+
+  // Wait for the approval receipt before refetching allowance — wagmi's
+  // writeContractAsync resolves on submission, not inclusion, so without this
+  // the UI would sit on the stale allowance for up to one polling interval.
+  const { data: approveReceipt, isLoading: isApproveMining } = useWaitForTransactionReceipt({
+    hash: approveTxHash ?? undefined,
+    query: { enabled: Boolean(approveTxHash) },
+  });
+
+  useEffect(() => {
+    if (approveReceipt?.status === "success") {
+      refetchAllowance();
+    }
+  }, [approveReceipt, refetchAllowance]);
+
+  const allowanceSufficient = (allowance ?? 0n) >= totalUsdc && totalUsdc > 0n;
+  const approvePending = isApproving || isApproveMining;
+
+  const pmFeePercent = parseInt(pmFeeBps) / 100;
 
   const handleSuggestionsGenerated = (suggestions: MilestoneSuggestion[]) => {
     setMilestones(
@@ -40,7 +110,7 @@ export const CreateProjectForm = () => {
   };
 
   const handleAddMilestone = () => {
-    setMilestones([...milestones, { description: "", amount: "0.1", assignee: "" }]);
+    setMilestones([...milestones, { description: "", amount: "10", assignee: "" }]);
   };
 
   const handleRemoveMilestone = (index: number) => {
@@ -53,20 +123,51 @@ export const CreateProjectForm = () => {
     setMilestones(updated);
   };
 
-  const totalAmount = milestones.reduce((sum, m) => {
-    const amount = parseFloat(m.amount) || 0;
-    return sum + amount;
-  }, 0);
-
-  const pmFeePercent = parseInt(pmFeeBps) / 100;
-
   const isValidForm = () => {
     if (pmAddress && !isAddress(pmAddress)) return false;
     if (milestones.length === 0) return false;
-    if (milestones.some(m => !m.description.trim() || parseFloat(m.amount) <= 0)) return false;
-    // Validate assignee addresses if provided
+    if (milestones.some(m => !m.description.trim() || safeParseUsdc(m.amount) <= 0n)) return false;
     if (milestones.some(m => m.assignee && !isAddress(m.assignee))) return false;
     return true;
+  };
+
+  const txLink = (hash: `0x${string}`) => (isArc ? `${ARCSCAN_TX}/${hash}` : undefined);
+
+  const handleApprove = async () => {
+    if (!escrowAddress) {
+      notification.error("Escrow contract not deployed on this network yet");
+      return;
+    }
+    if (totalUsdc <= 0n) {
+      notification.error("Total amount must be greater than zero");
+      return;
+    }
+    try {
+      const hash = await writeApprove({
+        address: ARC_USDC_ADDRESS,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [escrowAddress, totalUsdc],
+      });
+      setApproveTxHash(hash);
+      const link = txLink(hash);
+      notification.success(
+        link ? (
+          <span>
+            Approval sent —{" "}
+            <a href={link} target="_blank" rel="noreferrer" className="link">
+              view on Arcscan
+            </a>
+          </span>
+        ) : (
+          "Approval sent"
+        ),
+      );
+      // The useEffect above refetches allowance once the receipt lands.
+    } catch (error) {
+      console.error("Error approving USDC:", error);
+      notification.error("Failed to approve USDC");
+    }
   };
 
   const handleCreate = async () => {
@@ -74,27 +175,46 @@ export const CreateProjectForm = () => {
       notification.error("Please fill in all required fields correctly");
       return;
     }
+    if (!isEscrowDeployed) {
+      notification.error("Escrow contract not deployed on this network yet");
+      return;
+    }
+    if (!allowanceSufficient) {
+      notification.error("USDC allowance is insufficient — approve first");
+      return;
+    }
 
     try {
       const descriptions = milestones.map(m => m.description);
-      const amounts = milestones.map(m => parseEther(m.amount));
-      const pm = pmAddress || "0x0000000000000000000000000000000000000000";
+      const amounts = milestones.map(m => safeParseUsdc(m.amount));
+      const pm = (pmAddress || ZERO_ADDRESS) as `0x${string}`;
       const fee = pmAddress ? parseInt(pmFeeBps) : 0;
-      const totalValue = amounts.reduce((a, b) => a + b, 0n);
-
-      // Build initial assignees array - empty array means no initial assignees
       const hasAnyAssignee = milestones.some(m => m.assignee);
-      const initialAssignees = hasAnyAssignee
-        ? milestones.map(m => m.assignee || "0x0000000000000000000000000000000000000000")
-        : [];
+      const initialAssignees = (
+        hasAnyAssignee ? milestones.map(m => (m.assignee || ZERO_ADDRESS) as `0x${string}`) : []
+      ) as `0x${string}`[];
 
-      await writeContractAsync({
+      const hash = await writeEscrow({
         functionName: "createProject",
-        args: [pm, BigInt(fee), descriptions, amounts, initialAssignees as `0x${string}`[]],
-        value: totalValue,
+        args: [pm, BigInt(fee), descriptions, amounts, initialAssignees],
       });
+      if (hash) {
+        setCreateTxHash(hash);
+      }
 
-      notification.success("Project created successfully!");
+      const link = hash ? txLink(hash) : undefined;
+      notification.success(
+        link ? (
+          <span>
+            Project created —{" "}
+            <a href={link} target="_blank" rel="noreferrer" className="link">
+              view on Arcscan
+            </a>
+          </span>
+        ) : (
+          "Project created successfully!"
+        ),
+      );
       router.push("/projects");
     } catch (error) {
       console.error("Error creating project:", error);
@@ -108,7 +228,7 @@ export const CreateProjectForm = () => {
       <ul className="steps steps-horizontal w-full mb-8">
         <li className={`step ${step >= 1 ? "step-primary" : ""}`}>Describe Project</li>
         <li className={`step ${step >= 2 ? "step-primary" : ""}`}>Edit Milestones</li>
-        <li className={`step ${step >= 3 ? "step-primary" : ""}`}>Configure & Create</li>
+        <li className={`step ${step >= 3 ? "step-primary" : ""}`}>Approve & Create</li>
       </ul>
 
       {/* Step 1: AI Splitter */}
@@ -122,7 +242,7 @@ export const CreateProjectForm = () => {
             <button
               className="btn btn-outline"
               onClick={() => {
-                setMilestones([{ description: "", amount: "0.1", assignee: "" }]);
+                setMilestones([{ description: "", amount: "10", assignee: "" }]);
                 setStep(2);
               }}
             >
@@ -169,15 +289,13 @@ export const CreateProjectForm = () => {
                           <input
                             type="number"
                             step="0.01"
-                            min="0.001"
+                            min="0.01"
                             className="input input-bordered join-item w-full"
-                            placeholder="Amount"
+                            placeholder="10"
                             value={milestone.amount}
                             onChange={e => handleMilestoneChange(index, "amount", e.target.value)}
                           />
-                          <span className="join-item flex items-center bg-base-200 px-3 text-sm opacity-70">
-                            {currencySymbol}
-                          </span>
+                          <span className="join-item flex items-center bg-base-200 px-3 text-sm opacity-70">USDC</span>
                         </div>
                         <button
                           className="btn btn-ghost btn-square text-error"
@@ -223,9 +341,7 @@ export const CreateProjectForm = () => {
 
               <div className="flex justify-between items-center">
                 <span className="font-semibold">Total Amount:</span>
-                <span className="text-xl font-bold">
-                  {totalAmount.toFixed(4)} {currencySymbol}
-                </span>
+                <span className="text-xl font-bold">{totalUsdcDisplay} USDC</span>
               </div>
             </div>
           </div>
@@ -248,6 +364,28 @@ export const CreateProjectForm = () => {
       {/* Step 3: Configure & Create */}
       {step === 3 && (
         <div className="space-y-6">
+          {!isEscrowDeployed && (
+            <div className="alert alert-warning">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                className="stroke-current shrink-0 w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                />
+              </svg>
+              <span>
+                ChordEscrow is not deployed on <strong>{targetNetwork.name}</strong> yet. Ask the integrator to run{" "}
+                <code className="text-xs">yarn deploy</code> against Arc Testnet.
+              </span>
+            </div>
+          )}
+
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
               <h3 className="card-title">Project Configuration</h3>
@@ -268,7 +406,9 @@ export const CreateProjectForm = () => {
                 </svg>
                 <div>
                   <p className="text-sm">Workers can be assigned to each milestone after creation.</p>
-                  <p className="text-xs opacity-70">You can assign different workers to different milestones.</p>
+                  <p className="text-xs opacity-70">
+                    You can assign different workers — humans or AI agents — to different milestones.
+                  </p>
                 </div>
               </div>
 
@@ -324,40 +464,108 @@ export const CreateProjectForm = () => {
                 </div>
                 <div>
                   <p className="text-sm opacity-70">Total Value</p>
-                  <p className="font-bold">
-                    {totalAmount.toFixed(4)} {currencySymbol}
-                  </p>
+                  <p className="font-bold">{totalUsdcDisplay} USDC</p>
                 </div>
                 <div>
                   <p className="text-sm opacity-70">Pre-assigned</p>
                   <p className="font-bold">{milestones.filter(m => m.assignee && isAddress(m.assignee)).length}</p>
                 </div>
                 {pmAddress && isAddress(pmAddress) && (
-                  <>
-                    <div>
-                      <p className="text-sm opacity-70">PM Fee</p>
-                      <p className="font-bold">{pmFeePercent}%</p>
-                    </div>
-                  </>
+                  <div>
+                    <p className="text-sm opacity-70">PM Fee</p>
+                    <p className="font-bold">{pmFeePercent}%</p>
+                  </div>
                 )}
+                <div>
+                  <p className="text-sm opacity-70">Current USDC allowance</p>
+                  <p className="font-bold">
+                    {isLoadingAllowance ? "—" : `${formatUnits(allowance ?? 0n, USDC_DECIMALS)} USDC`}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-between">
+          {/* Two-step USDC flow */}
+          <div className="card bg-base-100 shadow-xl">
+            <div className="card-body">
+              <h3 className="card-title">Fund the escrow</h3>
+              <p className="text-sm opacity-70">
+                Funding takes two on-chain steps: first approve the escrow to pull{" "}
+                <span className="font-semibold">{totalUsdcDisplay} USDC</span> from your wallet, then create the
+                project. Both transactions pay gas in USDC on Arc.
+              </p>
+
+              <ol className="list-decimal list-inside space-y-3 mt-2">
+                <li>
+                  <span className={`font-medium ${allowanceSufficient ? "text-success line-through" : ""}`}>
+                    Approve USDC ({totalUsdcDisplay})
+                  </span>
+                  {approveTxHash && isArc && (
+                    <a
+                      href={`${ARCSCAN_TX}/${approveTxHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="link text-xs ml-2"
+                    >
+                      tx ↗
+                    </a>
+                  )}
+                </li>
+                <li>
+                  <span className={`font-medium ${createTxHash ? "text-success line-through" : ""}`}>
+                    Create project on-chain
+                  </span>
+                  {createTxHash && isArc && (
+                    <a
+                      href={`${ARCSCAN_TX}/${createTxHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="link text-xs ml-2"
+                    >
+                      tx ↗
+                    </a>
+                  )}
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <div className="flex justify-between gap-2">
             <button className="btn btn-ghost" onClick={() => setStep(2)}>
               Back
             </button>
-            <button className="btn btn-primary" onClick={handleCreate} disabled={!isValidForm() || isMining}>
-              {isMining ? (
-                <>
-                  <span className="loading loading-spinner loading-sm" />
-                  Creating...
-                </>
-              ) : (
-                `Create Project (${totalAmount.toFixed(4)} ${currencySymbol})`
-              )}
-            </button>
+            {allowanceSufficient ? (
+              <button
+                className="btn btn-primary"
+                onClick={handleCreate}
+                disabled={!isValidForm() || !isEscrowDeployed || isCreating}
+              >
+                {isCreating ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm" />
+                    Creating…
+                  </>
+                ) : (
+                  `Create project (${totalUsdcDisplay} USDC)`
+                )}
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                onClick={handleApprove}
+                disabled={!isValidForm() || !isEscrowDeployed || approvePending || !connectedAddress}
+              >
+                {approvePending ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm" />
+                    {isApproveMining ? "Waiting for confirmation…" : "Approving…"}
+                  </>
+                ) : (
+                  `Approve ${totalUsdcDisplay} USDC`
+                )}
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -6,8 +6,9 @@ import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
-  title: "Kite Milestone Escrow",
-  description: "Milestone-based escrow payments on Kite Chain",
+  title: "Chord — AI agents paid in USDC on Arc",
+  description:
+    "Chord is an on-chain milestone escrow where humans post projects and AI agents earn USDC for completing them. Built on Circle Arc Testnet.",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
