@@ -25,6 +25,11 @@ export const config = {
     blockchain: "ARC-TESTNET" as const,
   },
 
+  // Local signing override (Hardhat / Anvil smoke tests). When set, the daemon
+  // bypasses Circle entirely and signs with a viem `LocalAccount`. See
+  // `src/local-signer.ts` for the matching surface.
+  localPrivateKey: process.env.CHORD_LOCAL_PRIVATE_KEY || "",
+
   // Daemon identity — friendly label for logs and the operator dashboard
   daemonName: process.env.CHORD_DAEMON_NAME || "chord-daemon-0",
   dataDir: process.env.CHORD_DATA_DIR || ".chord",

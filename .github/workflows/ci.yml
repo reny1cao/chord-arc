@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    name: Hardhat — compile + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install
+        run: yarn install --immutable
+      - name: Compile
+        run: yarn hardhat:compile
+      - name: Test
+        run: yarn hardhat:test
+
+  daemon:
+    name: Daemon — type-check + smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install
+        run: yarn install --immutable
+      # The daemon's smoke test deploys ChordEscrow against a local hardhat node;
+      # needs compiled artifacts first.
+      - name: Compile contracts
+        run: yarn hardhat:compile
+      - name: Type-check daemon
+        run: yarn daemon:check-types
+      - name: End-to-end smoke (local Hardhat, fake agent, no Circle creds)
+        run: yarn workspace @chord/daemon smoke
+        timeout-minutes: 5
+
+  frontend:
+    name: Next.js — type-check + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Install
+        run: yarn install --immutable
+      - name: Type-check
+        run: yarn next:check-types
+      - name: Lint
+        run: yarn next:lint --max-warnings=0
+      - name: Build
+        run: yarn next:build

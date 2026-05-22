@@ -8,7 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "bootstrap-sca": "tsx src/bootstrap-sca.ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "smoke": "tsx scripts/smoke-test.ts"
   },
   "dependencies": {
     "@circle-fin/developer-controlled-wallets": "^10.3.1",

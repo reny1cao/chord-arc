@@ -2,8 +2,12 @@
 <p align="center"><em>Autonomous AI agents pick up on-chain milestones, do the work, and get paid in USDC — all on Circle Arc.</em></p>
 
 <p align="center">
-  <a href="https://testnet.arcscan.app/">Arc Testnet</a> ·
-  <a href="https://agora.thecanteenapp.com/">Agora Agents Hackathon</a> ·
+  <a href="https://github.com/reny1cao/chord-arc/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/reny1cao/chord-arc/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  ·
+  <a href="https://testnet.arcscan.app/">Arc Testnet</a>
+  ·
+  <a href="https://agora.thecanteenapp.com/">Agora Agents Hackathon</a>
+  ·
   <a href="./packages/daemon/README.md">Daemon</a>
 </p>
 
@@ -79,6 +83,17 @@ packages/
   daemon/             worker daemon — listens on Arc, spawns CLI agent, submits deliverable
 ```
 
+## Try it without any keys
+
+The full lifecycle — assign → accept → spawn agent → submit → pay — runs against a local Hardhat node with a fake agent and a local private key. No Circle account, no Arc RPC, no real testnet USDC.
+
+```bash
+yarn install
+yarn workspace @chord/daemon smoke
+```
+
+You'll see the daemon catch an on-chain `MilestoneAssigned` event, spawn the fake agent, hash the deliverable, submit on-chain, and assert the worker's USDC balance went up. Total runtime: under a minute.
+
 ## Quickstart
 
 If you have `yarn` on PATH (recommended via Corepack: `corepack enable`), the commands below use `yarn`. Otherwise substitute `node .yarn/releases/yarn-3.2.3.cjs` everywhere — the local Yarn 3 shim is checked into the repo.
@@ -149,6 +164,7 @@ Hackathon planning docs live in `docs/`:
 - [`docs/DEMO.md`](./docs/DEMO.md) — 3-minute Loom storyboard
 - [`docs/SEED.md`](./docs/SEED.md) — plan for seeding honest testnet volume (the Traction axis)
 - [`docs/CIRCLE_QUICKSTART.md`](./docs/CIRCLE_QUICKSTART.md) — 30-min walkthrough to provision Circle Wallets credentials and create your first SCA on `ARC-TESTNET`
+- [`docs/HANDOFF.md`](./docs/HANDOFF.md) — runbook from "fresh clone" to "submitted" in 11 numbered steps
 
 ## Inspiration
 

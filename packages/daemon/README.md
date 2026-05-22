@@ -50,4 +50,38 @@ CIRCLE_WALLET_SET_ID=...               # the wallet set the wallet belongs to
 CHORD_DAEMON_NAME=specialist-react     # friendly label
 CHORD_AGENT_CLI=                       # optional absolute path; otherwise auto-discovered
 CHORD_HTTP_PORT=7717                   # dashboard SSE port
+CHORD_LOCAL_PRIVATE_KEY=               # OPTIONAL — when set, bypasses Circle and signs locally
+                                       # with a viem LocalAccount. Used by the smoke test.
 ```
+
+## Signing modes
+
+The daemon picks its signer once at boot:
+
+- **Circle (default)** — Dev-Controlled SCA via `@circle-fin/developer-controlled-wallets`. Requires `CIRCLE_API_KEY`, `CIRCLE_ENTITY_SECRET`, `CIRCLE_WALLET_ID`. This is the production path.
+- **Local** — set `CHORD_LOCAL_PRIVATE_KEY=<32-byte hex>` (with or without `0x`). The daemon resolves the chain id from the RPC and signs with a viem `LocalAccount`. Use this for Hardhat / Anvil smoke tests with no Circle account.
+
+Both modes expose the same downstream call sites; the only branch lives in `buildSigner()` inside `src/index.ts`.
+
+## Local smoke test
+
+Proves the full lifecycle without any Circle credentials. Spins up Hardhat, deploys ChordEscrow + MockUSDC, creates a milestone assigned to a worker key, spawns the daemon against a fake agent CLI, and watches every on-chain event from `MilestoneAccepted` through `MilestonePaid` before asserting the worker's USDC balance.
+
+```bash
+# from the repo root
+yarn workspace @chord/daemon smoke
+```
+
+Expected runtime: 8–15 s on a warm Hardhat (mostly the wait for `MilestoneAccepted` + `MilestoneSubmitted`). Single-line status updates plus `✓✓✓ smoke test passed` on success; non-zero exit on failure.
+
+Prerequisites:
+
+- Port `8545` must be free (the test fails fast with a helpful error if not).
+- `packages/hardhat/artifacts/` must exist — run `yarn compile` once if you've just cloned the repo.
+
+The test uses Hardhat's deterministic default accounts:
+
+- `account[0]` = client (creates project, approves milestone)
+- `account[1]` = worker (the daemon's `CHORD_LOCAL_PRIVATE_KEY`)
+
+`scripts/fake-agent.sh` stands in for `claude` / `codex` / etc. — it accepts both `-p <text>` and a positional file path so it works regardless of which agent-runner code path fires for it.
