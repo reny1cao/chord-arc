@@ -2,11 +2,14 @@
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
-
 @theme {
-  --shadow-center: 0 0 12px -2px rgb(0 0 0 / 0.05);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --shadow-soft: 0 1px 2px rgb(26 24 21 / 0.04), 0 1px 3px rgb(26 24 21 / 0.06);
+  --shadow-lift: 0 10px 30px -12px rgb(26 24 21 / 0.18), 0 4px 12px -4px rgb(26 24 21 / 0.06);
+  --shadow-glow-primary: 0 6px 20px -8px rgb(255 107 61 / 0.35);
   --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-rise: rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @plugin "daisyui" {
@@ -15,81 +18,85 @@
     dark --prefersdark;
 }
 
+/* ──────────── Light: warm paper + near-black + coral ──────────── */
 @plugin "daisyui/theme" {
   name: "light";
 
-  --color-primary: #93bbfb;
-  --color-primary-content: #212638;
-  --color-secondary: #dae8ff;
-  --color-secondary-content: #212638;
-  --color-accent: #93bbfb;
-  --color-accent-content: #212638;
-  --color-neutral: #212638;
-  --color-neutral-content: #ffffff;
   --color-base-100: #ffffff;
-  --color-base-200: #f4f8ff;
-  --color-base-300: #dae8ff;
-  --color-base-content: #212638;
-  --color-info: #93bbfb;
-  --color-success: #34eeb6;
-  --color-warning: #ffcf72;
-  --color-error: #ff8863;
+  --color-base-200: #f7f5f1;
+  --color-base-300: #e8e3d9;
+  --color-base-content: #1a1815;
 
-  --radius-field: 9999rem;
-  --radius-box: 1rem;
+  --color-primary: #ff6b3d;
+  --color-primary-content: #ffffff;
+  --color-secondary: #f3efe8;
+  --color-secondary-content: #1a1815;
+  --color-accent: #1a1815;
+  --color-accent-content: #ffffff;
+  --color-neutral: #1a1815;
+  --color-neutral-content: #f7f5f1;
+  --color-info: #1a1815;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.875rem;
   --tt-tailw: 6px;
 }
 
+/* ──────────── Dark: warm near-black + bone + coral ──────────── */
 @plugin "daisyui/theme" {
   name: "dark";
 
-  --color-primary: #212638;
-  --color-primary-content: #f9fbff;
-  --color-secondary: #323f61;
-  --color-secondary-content: #f9fbff;
-  --color-accent: #4969a6;
-  --color-accent-content: #f9fbff;
-  --color-neutral: #f9fbff;
-  --color-neutral-content: #385183;
-  --color-base-100: #385183;
-  --color-base-200: #2a3655;
-  --color-base-300: #212638;
-  --color-base-content: #f9fbff;
-  --color-info: #385183;
-  --color-success: #34eeb6;
-  --color-warning: #ffcf72;
-  --color-error: #ff8863;
+  --color-base-100: #18181a;
+  --color-base-200: #0e0e10;
+  --color-base-300: #2b2a2e;
+  --color-base-content: #f0ede7;
 
-  --radius-field: 9999rem;
-  --radius-box: 1rem;
+  --color-primary: #ff7a4d;
+  --color-primary-content: #1a1815;
+  --color-secondary: #232225;
+  --color-secondary-content: #f0ede7;
+  --color-accent: #f0ede7;
+  --color-accent-content: #18181a;
+  --color-neutral: #f0ede7;
+  --color-neutral-content: #18181a;
+  --color-info: #f0ede7;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #f87171;
 
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.875rem;
   --tt-tailw: 6px;
-  --tt-bg: var(--color-primary);
+  --tt-bg: var(--color-base-100);
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--color-base-300, currentColor);
   }
 
-  p {
-    margin: 1rem 0;
+  html {
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1,
+      "ss01" 1;
   }
 
   body {
     min-height: 100vh;
+    background: var(--color-base-200);
+    color: var(--color-base-content);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1,
@@ -97,7 +104,23 @@
   h3,
   h4 {
     margin-bottom: 0.5rem;
-    line-height: 1;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+    color: var(--color-base-content);
+  }
+
+  h1 {
+    letter-spacing: -0.04em;
+  }
+
+  p {
+    margin: 0.5rem 0;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    color: var(--color-base-content);
   }
 }
 
@@ -106,18 +129,222 @@
   background: var(--color-base-200);
 }
 
-.btn {
-  @apply shadow-md;
+/* ───────────────────── Components ───────────────────── */
+
+/* Status pills remain pills (radius-field dropped to 0.5rem for inputs/btns). */
+.badge {
+  border-radius: 9999rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
-.btn.btn-ghost {
-  @apply shadow-none;
+.btn {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn.btn-ghost,
+.btn.btn-link {
+  box-shadow: none;
+}
+
+.btn.btn-primary {
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.btn.btn-primary:hover {
+  box-shadow: 0 10px 28px -8px rgb(255 107 61 / 0.5);
+}
+
+[data-theme="dark"] .btn.btn-primary {
+  box-shadow: 0 6px 20px -8px rgb(255 122 77 / 0.4);
+}
+
+[data-theme="dark"] .btn.btn-primary:hover {
+  box-shadow: 0 10px 28px -8px rgb(255 122 77 / 0.55);
+}
+
+/* Inputs / textareas: refined focus ring with coral tint. */
+.input,
+.textarea,
+.select {
+  border: 1px solid var(--color-base-300);
+  background: var(--color-base-100);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+/* Card: a single neutral border + tiny shadow. No coloured background blooms. */
+.card {
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  box-shadow: var(--shadow-soft);
+}
+
+.card.shadow-xl,
+.card.shadow-2xl {
+  box-shadow: var(--shadow-soft);
+}
+
+.progress {
+  height: 0.5rem;
+  border-radius: 9999rem;
+  background: var(--color-base-300);
+  overflow: hidden;
+}
+
+.progress::-webkit-progress-value,
+.progress::-moz-progress-bar {
+  background: var(--color-primary);
+}
+
+.tabs-boxed {
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+  padding: 0.25rem;
+  border-radius: 0.625rem;
+}
+
+.tabs-boxed .tab {
+  border-radius: 0.4rem;
+  font-weight: 500;
+}
+
+.tabs-boxed .tab-active {
+  background: var(--color-base-content) !important;
+  color: var(--color-base-100) !important;
+  box-shadow: 0 1px 2px rgb(26 24 21 / 0.18);
+}
+
+.steps .step-primary + .step-primary:before,
+.steps .step-primary:after {
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: -0.03em;
 }
 
 .link {
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  transition: text-decoration-color 0.15s, opacity 0.15s;
 }
 
 .link:hover {
-  opacity: 80%;
+  text-decoration-color: currentColor;
+  opacity: 1;
+}
+
+/* ───────────────────── Utilities ───────────────────── */
+
+/* Hero background — flat warm wash + subtle dotted texture. NO gradient mesh. */
+.bg-paper {
+  background-color: var(--color-base-200);
+  background-image:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--color-base-content) 9%, transparent) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+[data-theme="dark"] .bg-paper {
+  background-image:
+    radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--color-base-content) 7%, transparent) 1px, transparent 0);
+}
+
+/* A thin horizontal grain — used as a section divider band. */
+.bg-grain {
+  background-color: var(--color-base-200);
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-base-content) 4%, transparent) 0,
+      color-mix(in srgb, var(--color-base-content) 4%, transparent) 1px,
+      transparent 1px,
+      transparent 6px
+    );
+}
+
+/* Frosted-glass surface — sticky header. Warm, not blue. */
+.glass {
+  background: color-mix(in srgb, var(--color-base-200) 78%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-base-300) 60%, transparent);
+}
+
+[data-theme="dark"] .glass {
+  background: color-mix(in srgb, var(--color-base-200) 75%, transparent);
+}
+
+/* Soft warm panel — used for editorial sections (proof, banners). */
+.warm-panel {
+  background: var(--color-base-100);
+  border: 1px solid var(--color-base-300);
+}
+
+[data-theme="dark"] .warm-panel {
+  background: color-mix(in srgb, var(--color-base-100) 85%, var(--color-base-200) 15%);
+}
+
+/* Inset rule, used between header & content sections */
+.rule-soft {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-base-content) 18%, transparent),
+    transparent
+  );
+}
+
+/* Address widget from @scaffold-ui/components — normalize monospace. */
+.address-mono :where(span, a) {
+  font-family: var(--font-mono) !important;
+  letter-spacing: -0.01em;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: var(--animate-rise);
+}
+
+[data-rk] button {
+  font-family: var(--font-sans) !important;
+  font-weight: 500 !important;
 }

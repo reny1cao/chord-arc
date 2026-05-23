@@ -77,7 +77,7 @@ export const AIMilestoneSplitter = ({ onAccept }: AIMilestoneSplitterProps) => {
   return (
     <div className="rounded-2xl border border-base-300 bg-base-100 shadow-sm">
       <div className="flex items-center gap-3 border-b border-base-300 px-6 py-4">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
           <SparklesIcon className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">

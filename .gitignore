@@ -40,3 +40,6 @@ packages/hardhat/coverage.json
 .env.local
 .env.*.local
 .infisical-secrets.json
+
+# local smoke-test artifacts
+.screenshots/

@@ -54,83 +54,88 @@ const ProjectDashboard: NextPage = () => {
   }, [projectCount]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
         <div>
-          <h1 className="text-3xl font-bold">Projects</h1>
-          <p className="text-sm opacity-70 mt-1">Open milestones for agents, and the projects you&apos;ve funded.</p>
+          <span className="text-[11px] uppercase tracking-[0.18em] font-semibold text-primary">Dashboard</span>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight">Projects</h1>
+          <p className="text-sm text-base-content/65 mt-2 max-w-xl">
+            Open milestones for agents, and the projects you&apos;ve funded.
+          </p>
         </div>
-        <Link href="/projects/create" className="btn btn-primary">
+        <Link href="/projects/create" className="btn btn-primary gap-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            strokeWidth={1.5}
+            strokeWidth={2}
             stroke="currentColor"
-            className="h-5 w-5"
+            className="h-4 w-4"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          New Project
+          New project
         </Link>
       </div>
 
-      {/* Role Tabs */}
-      <div className="tabs tabs-boxed mb-6">
-        <button
-          className={`tab ${activeTab === "all" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("all")}
-        >
-          All Projects
-        </button>
-        <button
-          className={`tab ${activeTab === "client" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("client")}
-        >
-          As Client
-        </button>
-        <button
-          className={`tab ${activeTab === "assignee" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("assignee")}
-        >
-          As Worker
-        </button>
-        <button
-          className={`tab ${activeTab === "pm" ? "tab-active" : ""}`}
-          onClick={() => setActiveTab("pm")}
-        >
-          As PM
-        </button>
+      {/* Role tabs */}
+      <div className="tabs tabs-boxed mb-8 inline-flex">
+        {(
+          [
+            { id: "all", label: "All" },
+            { id: "client", label: "As client" },
+            { id: "assignee", label: "As worker" },
+            { id: "pm", label: "As PM" },
+          ] as { id: FilterRole; label: string }[]
+        ).map(({ id, label }) => (
+          <button
+            key={id}
+            className={`tab ${activeTab === id ? "tab-active" : ""}`}
+            onClick={() => setActiveTab(id)}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {!address ? (
-        <div className="alert alert-info">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            className="stroke-current shrink-0 w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>Please connect your wallet to view your projects</span>
+        <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-8 flex items-start gap-4">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.8}
+              stroke="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </span>
+          <div>
+            <h3 className="font-semibold tracking-tight">Connect a wallet</h3>
+            <p className="text-sm text-base-content/65 mt-1">
+              Connect on Arc Testnet to view the projects you&apos;ve funded, accepted, or are managing.
+            </p>
+          </div>
         </div>
       ) : projectIds.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">📋</div>
-          <h3 className="text-xl font-semibold mb-2">No projects yet</h3>
-          <p className="opacity-70 mb-4">Create your first project to get started</p>
-          <Link href="/projects/create" className="btn btn-primary">
-            Create Project
+        <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-16 text-center">
+          <div className="text-[11px] uppercase tracking-[0.18em] font-semibold text-base-content/45">Empty</div>
+          <h3 className="mt-3 text-xl font-semibold tracking-tight">No projects yet</h3>
+          <p className="mt-2 text-sm text-base-content/65 max-w-sm mx-auto">
+            Create the first project on this contract and watch it settle in USDC.
+          </p>
+          <Link href="/projects/create" className="btn btn-primary mt-6 gap-2">
+            Create project
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {projectIds.map(id => (
             <ProjectItem key={id} projectId={id} filterRole={activeTab} />
           ))}

@@ -4,39 +4,32 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 
-export const SwitchTheme = ({ className }: { className?: string }) => {
+/**
+ * Compact theme toggle — a single rounded icon button that flips between
+ * light and dark. Mounts SSR-safe (returns a placeholder until hydration).
+ */
+export const SwitchTheme = ({ className = "" }: { className?: string }) => {
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-
-  const isDarkMode = resolvedTheme === "dark";
-
-  const handleToggle = () => {
-    if (isDarkMode) {
-      setTheme("light");
-      return;
-    }
-    setTheme("dark");
-  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return <div className={`h-8 w-8 ${className}`} aria-hidden />;
+  }
+
+  const isDark = resolvedTheme === "dark";
 
   return (
-    <div className={`flex space-x-2 h-8 items-center justify-center text-sm ${className}`}>
-      <input
-        id="theme-toggle"
-        type="checkbox"
-        className="toggle bg-secondary toggle-primary hover:bg-accent transition-all"
-        onChange={handleToggle}
-        checked={isDarkMode}
-      />
-      <label htmlFor="theme-toggle" className={`swap swap-rotate ${!isDarkMode ? "swap-active" : ""}`}>
-        <SunIcon className="swap-on h-5 w-5" />
-        <MoonIcon className="swap-off h-5 w-5" />
-      </label>
-    </div>
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-base-content/70 hover:text-base-content hover:bg-base-200 transition-colors ${className}`}
+    >
+      {isDark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+    </button>
   );
 };

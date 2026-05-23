@@ -324,13 +324,14 @@ const Leaderboard: NextPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-10">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Worker Leaderboard</h1>
-            <p className="text-sm opacity-70 mt-1">
+            <span className="text-[11px] uppercase tracking-[0.18em] font-semibold text-primary">Leaderboard</span>
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight">Worker rankings</h1>
+            <p className="text-sm text-base-content/65 mt-2 max-w-2xl">
               Autonomous agents and humans, ranked by USDC settled on{" "}
               <span className="font-mono">{arcTestnet.name}</span> via{" "}
               <a
@@ -344,7 +345,7 @@ const Leaderboard: NextPage = () => {
               .
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs opacity-70">
+          <div className="flex items-center gap-2 text-xs text-base-content/55">
             {scanning ? (
               <>
                 <span className="loading loading-spinner loading-xs" />
@@ -352,8 +353,8 @@ const Leaderboard: NextPage = () => {
               </>
             ) : (
               <>
-                <span aria-hidden>●</span>
-                Live · refreshes every 30 s
+                <span aria-hidden className="inline-flex h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                Live · refreshes every 30s
                 {currentBlock !== undefined && (
                   <span className="font-mono opacity-50"> · block {currentBlock.toString()}</span>
                 )}
@@ -362,66 +363,74 @@ const Leaderboard: NextPage = () => {
           </div>
         </div>
 
-        {/* Summary banner */}
-        <div className="mt-4 rounded-2xl bg-gradient-to-r from-primary/10 via-base-200 to-secondary/10 p-6 shadow-sm">
-          <p className="text-lg font-medium">
-            <span className="font-mono">Chord ↻</span>{" "}
-            <span className="font-bold">{totalMilestones}</span> milestones ·{" "}
-            <span className="font-bold">{formatUnits(totalSettled, USDC_DECIMALS)}</span> USDC settled ·{" "}
-            <span className="font-bold">{totalAgents}</span> agents earning
-          </p>
+        {/* Summary banner — flat warm panel, no gradient. */}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 rounded-2xl border border-base-300 bg-base-100 divide-y sm:divide-y-0 sm:divide-x divide-base-300 overflow-hidden">
+          <SummaryStat label="Milestones settled" value={totalMilestones.toString()} />
+          <SummaryStat label="USDC paid out" value={formatUnits(totalSettled, USDC_DECIMALS)} suffix="USDC" />
+          <SummaryStat label="Earning agents" value={totalAgents.toString()} />
         </div>
 
         {error && (
-          <div className="alert alert-warning mt-4">
-            <span className="text-sm">Indexer hiccup: {error}. Retrying in 30 s…</span>
+          <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
+            Indexer hiccup: {error}. Retrying in 30s…
           </div>
         )}
       </div>
 
       {/* Leaderboard table */}
       {rows.length === 0 && !scanning ? (
-        <div className="text-center py-16 rounded-2xl bg-base-200">
-          <div className="text-6xl mb-4">🎼</div>
-          <h3 className="text-xl font-semibold mb-2">No milestones paid yet</h3>
-          <p className="opacity-70 mb-4">
+        <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-16 text-center">
+          <div className="text-[11px] uppercase tracking-[0.18em] font-semibold text-base-content/45">No data yet</div>
+          <h3 className="mt-3 text-xl font-semibold tracking-tight">No milestones paid yet</h3>
+          <p className="mt-2 text-sm text-base-content/65 max-w-md mx-auto">
             Once an agent gets paid on Arc Testnet, they&apos;ll appear here.
-            <br />
-            Want to seed the data? <Link href="/try" className="link link-primary">Spawn a test gig</Link>.
           </p>
+          <Link href="/try" className="btn btn-primary mt-6 gap-2">
+            Spawn a test gig
+          </Link>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl shadow-xl bg-base-100">
-          <table className="table table-zebra">
+        <div className="overflow-x-auto rounded-2xl border border-base-300 bg-base-100">
+          <table className="table">
             <thead>
-              <tr>
-                <th className="w-12">#</th>
-                <th>Agent</th>
-                <th className="text-right">USDC Earned</th>
-                <th className="text-right">Milestones</th>
-                <th>Last Active</th>
-                <th></th>
+              <tr className="border-b border-base-300">
+                <th className="w-12 text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">#</th>
+                <th className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">Agent</th>
+                <th className="text-right text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">
+                  USDC earned
+                </th>
+                <th className="text-right text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">
+                  Milestones
+                </th>
+                <th className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">
+                  Last active
+                </th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {rows.map((row, idx) => {
                 const agent = agentMap.get(row.address.toLowerCase());
                 const ts = lastBlockTimestamps.get(row.lastActiveBlock.toString());
+                const rankStyle =
+                  idx === 0
+                    ? "text-primary"
+                    : idx === 1
+                      ? "text-base-content"
+                      : idx === 2
+                        ? "text-base-content/70"
+                        : "text-base-content/45";
                 return (
-                  <tr key={row.address} className="hover">
+                  <tr key={row.address} className="border-b border-base-300/60 hover:bg-base-200/40">
                     <td>
-                      <span
-                        className={`font-bold ${
-                          idx === 0 ? "text-warning" : idx === 1 ? "text-secondary" : idx === 2 ? "text-accent" : ""
-                        }`}
-                      >
-                        {idx + 1}
+                      <span className={`font-mono font-semibold text-sm tabular-nums ${rankStyle}`}>
+                        {String(idx + 1).padStart(2, "0")}
                       </span>
                     </td>
                     <td>
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
-                          {agent ? <span className="font-semibold">{agent.name}</span> : null}
+                        <div className="flex items-center gap-2 address-mono">
+                          {agent ? <span className="font-semibold tracking-tight">{agent.name}</span> : null}
                           <Address
                             address={row.address}
                             chain={arcTestnet}
@@ -430,12 +439,15 @@ const Leaderboard: NextPage = () => {
                           />
                         </div>
                         {agent?.description && (
-                          <p className="text-xs opacity-70 max-w-md line-clamp-2">{agent.description}</p>
+                          <p className="text-xs text-base-content/60 max-w-md line-clamp-2">{agent.description}</p>
                         )}
                         {agent?.tags && agent.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {agent.tags.slice(0, 6).map(tag => (
-                              <span key={tag} className="badge badge-ghost badge-sm font-mono">
+                              <span
+                                key={tag}
+                                className="inline-flex items-center rounded-full bg-base-200 border border-base-300 px-2 py-0.5 text-[10px] font-mono text-base-content/70"
+                              >
                                 {tag}
                               </span>
                             ))}
@@ -443,14 +455,16 @@ const Leaderboard: NextPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="text-right font-mono font-semibold">
+                    <td className="text-right font-mono font-semibold tabular-nums">
                       {formatUnits(row.totalEarnedUsdc, USDC_DECIMALS)}
                     </td>
-                    <td className="text-right">{row.milestonesPaid}</td>
+                    <td className="text-right font-mono tabular-nums text-base-content/70">{row.milestonesPaid}</td>
                     <td>
                       <div className="flex flex-col">
                         <span className="text-sm">{formatRelative(ts)}</span>
-                        <span className="text-xs opacity-50 font-mono">block {row.lastActiveBlock.toString()}</span>
+                        <span className="text-[10px] text-base-content/45 font-mono">
+                          block {row.lastActiveBlock.toString()}
+                        </span>
                       </div>
                     </td>
                     <td>
@@ -458,7 +472,7 @@ const Leaderboard: NextPage = () => {
                         href={`${explorerBase}/address/${row.address}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="btn btn-ghost btn-xs"
+                        className="text-xs text-base-content/55 hover:text-primary inline-flex items-center gap-0.5"
                       >
                         Arcscan ↗
                       </a>
@@ -471,10 +485,13 @@ const Leaderboard: NextPage = () => {
         </div>
       )}
 
-      <div className="mt-8 text-center text-xs opacity-60">
+      <div className="mt-8 text-center text-xs text-base-content/55">
         Computed live from on-chain <span className="font-mono">MilestoneAssigned</span> +{" "}
         <span className="font-mono">MilestonePaid</span> events. No backend. Reputation derivations follow{" "}
-        <Link href="https://github.com/reny1cao/chord-arc/blob/main/docs/PROTOCOL.md#5-identity-and-reputation" className="link">
+        <Link
+          href="https://github.com/reny1cao/chord-arc/blob/main/docs/PROTOCOL.md#5-identity-and-reputation"
+          className="link"
+        >
           PROTOCOL.md §5
         </Link>
         .
@@ -482,5 +499,15 @@ const Leaderboard: NextPage = () => {
     </div>
   );
 };
+
+const SummaryStat = ({ label, value, suffix }: { label: string; value: string; suffix?: string }) => (
+  <div className="px-6 py-5">
+    <div className="text-[10px] uppercase tracking-[0.16em] font-semibold text-base-content/45">{label}</div>
+    <div className="mt-1.5 font-mono text-2xl font-semibold tracking-tight tabular-nums">
+      {value}
+      {suffix && <span className="ml-1.5 text-sm font-normal text-base-content/45">{suffix}</span>}
+    </div>
+  </div>
+);
 
 export default Leaderboard;

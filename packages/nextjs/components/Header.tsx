@@ -4,13 +4,9 @@ import React, { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
-import {
-  Bars3Icon,
-  BoltIcon,
-  BugAntIcon,
-  ClipboardDocumentListIcon,
-  TrophyIcon,
-} from "@heroicons/react/24/outline";
+import { Bars3Icon, BoltIcon, BugAntIcon, ClipboardDocumentListIcon, TrophyIcon } from "@heroicons/react/24/outline";
+import { Logo } from "~~/components/Logo";
+import { SwitchTheme } from "~~/components/SwitchTheme";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { arcTestnet } from "~~/scaffold.config";
@@ -22,10 +18,6 @@ type HeaderMenuLink = {
 };
 
 export const menuLinks: HeaderMenuLink[] = [
-  {
-    label: "Home",
-    href: "/",
-  },
   {
     label: "Projects",
     href: "/projects",
@@ -42,7 +34,7 @@ export const menuLinks: HeaderMenuLink[] = [
     icon: <BoltIcon className="h-4 w-4" />,
   },
   {
-    label: "Debug Contracts",
+    label: "Debug",
     href: "/debug",
     icon: <BugAntIcon className="h-4 w-4" />,
   },
@@ -54,15 +46,17 @@ export const HeaderMenuLinks = () => {
   return (
     <>
       {menuLinks.map(({ label, href, icon }) => {
-        const isActive = pathname === href;
+        const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
         return (
           <li key={href}>
             <Link
               href={href}
               passHref
-              className={`${
-                isActive ? "bg-secondary shadow-md" : ""
-              } hover:bg-secondary hover:shadow-md focus:!bg-secondary active:!text-neutral py-1.5 px-3 text-sm rounded-full gap-2 grid grid-flow-col`}
+              className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                isActive
+                  ? "text-base-content bg-base-200"
+                  : "text-base-content/70 hover:text-base-content hover:bg-base-200/60"
+              }`}
             >
               {icon}
               <span>{label}</span>
@@ -75,7 +69,7 @@ export const HeaderMenuLinks = () => {
 };
 
 /**
- * Site header
+ * Site header — sticky glass navbar with logo, nav links, wallet, theme toggle.
  */
 export const Header = () => {
   const { targetNetwork } = useTargetNetwork();
@@ -88,46 +82,52 @@ export const Header = () => {
   });
 
   return (
-    <div className="sticky lg:static top-0 navbar bg-base-100 min-h-0 shrink-0 justify-between z-20 shadow-md shadow-secondary px-0 sm:px-2">
-      <div className="navbar-start w-auto lg:w-1/2">
-        <details className="dropdown" ref={burgerMenuRef}>
-          <summary className="ml-1 btn btn-ghost lg:hidden hover:bg-transparent">
-            <Bars3Icon className="h-1/2" />
-          </summary>
-          <ul
-            className="menu menu-compact dropdown-content mt-3 p-2 shadow-sm bg-base-100 rounded-box w-52"
-            onClick={() => {
-              burgerMenuRef?.current?.removeAttribute("open");
-            }}
-          >
-            <HeaderMenuLinks />
-          </ul>
-        </details>
-        <Link href="/" passHref className="hidden lg:flex items-center gap-3 ml-4 mr-6 shrink-0">
-          <div
-            aria-hidden
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary text-lg shadow-sm"
-          >
-            <span>🎼</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold leading-tight">Chord</span>
-            <span className="text-xs opacity-70">AI agents · USDC · Arc</span>
-          </div>
-        </Link>
-        <ul className="hidden lg:flex lg:flex-nowrap menu menu-horizontal px-1 gap-2">
-          <HeaderMenuLinks />
-        </ul>
+    <header className="sticky top-0 z-30 glass">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 h-14">
+        {/* Left: logo + desktop nav */}
+        <div className="flex items-center gap-2">
+          <details className="dropdown lg:hidden" ref={burgerMenuRef}>
+            <summary className="btn btn-ghost btn-sm px-2 hover:bg-base-200">
+              <Bars3Icon className="h-5 w-5" />
+            </summary>
+            <ul
+              className="menu dropdown-content mt-2 p-2 bg-base-100 border border-base-300 rounded-xl shadow-lift w-56 z-40"
+              onClick={() => {
+                burgerMenuRef?.current?.removeAttribute("open");
+              }}
+            >
+              <HeaderMenuLinks />
+            </ul>
+          </details>
+
+          <Link href="/" passHref className="flex items-center gap-2.5 shrink-0">
+            <Logo size={28} className="text-primary" />
+            <div className="hidden sm:flex flex-col leading-none">
+              <span className="font-semibold text-base tracking-tight">Chord</span>
+              <span className="text-[10px] uppercase tracking-[0.14em] text-base-content/55">protocol · arc</span>
+            </div>
+          </Link>
+
+          <nav className="hidden lg:block ml-6">
+            <ul className="flex items-center gap-1">
+              <HeaderMenuLinks />
+            </ul>
+          </nav>
+        </div>
+
+        {/* Right: status + wallet + theme */}
+        <div className="flex items-center gap-2">
+          {isArc && (
+            <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-medium text-base-content/70 px-2.5 py-1 rounded-full bg-base-200 border border-base-300">
+              <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+              Arc Testnet
+            </span>
+          )}
+          <RainbowKitCustomConnectButton />
+          {isLocalNetwork && <FaucetButton />}
+          <SwitchTheme className="ml-1" />
+        </div>
       </div>
-      <div className="navbar-end grow mr-4 gap-2">
-        {isArc && (
-          <span className="hidden sm:inline-flex badge badge-outline badge-sm text-xs gap-1">
-            <span aria-hidden>●</span> Arc Testnet · USDC
-          </span>
-        )}
-        <RainbowKitCustomConnectButton />
-        {isLocalNetwork && <FaucetButton />}
-      </div>
-    </div>
+    </header>
   );
 };

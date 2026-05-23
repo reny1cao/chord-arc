@@ -16,47 +16,77 @@ interface StatusBadgeProps {
   size?: "sm" | "md" | "lg";
 }
 
-const statusConfig: Record<MilestoneStatus, { label: string; className: string }> = {
+interface BadgeConfig {
+  label: string;
+  className: string;
+  showDot?: boolean;
+  dotClass?: string;
+}
+
+const statusConfig: Record<MilestoneStatus, BadgeConfig> = {
   [MilestoneStatus.Created]: {
     label: "Open",
-    className: "badge-ghost",
+    className: "text-base-content/70 bg-base-200 border border-base-300",
+    showDot: true,
+    dotClass: "bg-base-content/40",
   },
   [MilestoneStatus.Assigned]: {
     label: "Assigned",
-    className: "badge-info badge-outline",
+    className: "text-info bg-info/10 border border-info/20",
+    showDot: true,
+    dotClass: "bg-info",
   },
   [MilestoneStatus.Accepted]: {
     label: "Accepted",
-    className: "badge-info",
+    className: "text-info bg-info/15 border border-info/25",
+    showDot: true,
+    dotClass: "bg-info",
   },
   [MilestoneStatus.InProgress]: {
-    label: "In Progress",
-    className: "badge-warning",
+    label: "In progress",
+    className: "text-warning bg-warning/10 border border-warning/20",
+    showDot: true,
+    dotClass: "bg-warning animate-pulse",
   },
   [MilestoneStatus.Submitted]: {
     label: "Submitted",
-    className: "badge-accent",
+    className: "text-accent bg-accent/10 border border-accent/25",
+    showDot: true,
+    dotClass: "bg-accent animate-pulse",
   },
   [MilestoneStatus.Approved]: {
     label: "Approved",
-    className: "badge-success badge-outline",
+    className: "text-success bg-success/10 border border-success/25",
+    showDot: true,
+    dotClass: "bg-success",
   },
   [MilestoneStatus.Paid]: {
     label: "Paid",
-    className: "badge-success",
+    className: "text-success bg-success/15 border border-success/30",
+    showDot: true,
+    dotClass: "bg-success",
   },
+};
+
+const sizeClass = {
+  sm: "text-[10px] px-1.5 py-0.5 gap-1",
+  md: "text-xs px-2.5 py-0.5 gap-1.5",
+  lg: "text-sm px-3 py-1 gap-1.5",
 };
 
 export const StatusBadge = ({ status, size = "md" }: StatusBadgeProps) => {
   const config = statusConfig[status as MilestoneStatus] || statusConfig[MilestoneStatus.Created];
 
-  const sizeClass = {
-    sm: "badge-sm",
-    md: "",
-    lg: "badge-lg",
-  }[size];
-
-  return <span className={`badge ${config.className} ${sizeClass}`}>{config.label}</span>;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full font-semibold tracking-tight whitespace-nowrap ${config.className} ${sizeClass[size]}`}
+    >
+      {config.showDot && (
+        <span aria-hidden className={`inline-block h-1.5 w-1.5 rounded-full ${config.dotClass}`} />
+      )}
+      {config.label}
+    </span>
+  );
 };
 
 export const getStatusLabel = (status: MilestoneStatus | number): string => {

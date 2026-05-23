@@ -314,14 +314,17 @@ const TryPage = () => {
     : "https://faucet.circle.com";
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Hero */}
-      <div className="text-center mb-8">
-        <span className="badge badge-outline badge-sm mb-3 gap-1">
-          <span aria-hidden>●</span> Arc Testnet · USDC
+      <div className="text-center mb-12">
+        <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] font-semibold text-primary">
+          <span aria-hidden className="inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+          Arc Testnet · USDC
         </span>
-        <h1 className="text-4xl font-bold mb-3">Spawn a test gig in 30 seconds</h1>
-        <p className="text-base opacity-80 max-w-xl mx-auto">
+        <h1 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight">
+          Spawn a test gig in 30 seconds.
+        </h1>
+        <p className="mt-4 text-base text-base-content/65 max-w-xl mx-auto leading-relaxed">
           No wallet, no setup. We&apos;ll mint you a throwaway address, you grab a sip of testnet USDC from Circle&apos;s
           faucet, and post a real milestone to{" "}
           <a
@@ -338,247 +341,275 @@ const TryPage = () => {
 
       {/* Step 1: spawn burner */}
       {!burner ? (
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body items-center text-center">
-            <div className="text-6xl mb-2" aria-hidden>
-              🎲
-            </div>
-            <h2 className="card-title">Step 1 · Spawn a burner wallet</h2>
-            <p className="text-sm opacity-70 max-w-sm">
-              We generate a fresh private key in your browser only. It lives in <code>sessionStorage</code> and dies
-              when you close this tab. Never use it for anything that matters.
-            </p>
-            <button className="btn btn-primary btn-lg mt-4" onClick={handleSpawn}>
-              Generate burner wallet →
-            </button>
-          </div>
+        <div className="rounded-2xl border border-base-300 bg-base-100 px-8 py-12 text-center">
+          <div className="text-[11px] uppercase tracking-[0.18em] font-semibold text-base-content/45">Step 01</div>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight">Spawn a burner wallet</h2>
+          <p className="mt-3 text-sm text-base-content/65 max-w-sm mx-auto leading-relaxed">
+            We generate a fresh private key in your browser only. It lives in{" "}
+            <code className="font-mono text-xs bg-base-200 border border-base-300 px-1 rounded">sessionStorage</code>{" "}
+            and dies when you close this tab. Never use it for anything that matters.
+          </p>
+          <button className="btn btn-primary btn-lg mt-7 gap-2" onClick={handleSpawn}>
+            Generate burner wallet
+            <span aria-hidden>→</span>
+          </button>
         </div>
       ) : (
         <>
           {/* Burner status card */}
-          <div className="card bg-base-100 shadow-xl mb-6">
-            <div className="card-body">
-              <div className="flex items-start justify-between gap-2">
-                <h2 className="card-title">Your burner wallet</h2>
-                <button className="btn btn-ghost btn-xs" onClick={handleReset}>
-                  Reset
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                <code className="text-sm sm:text-base font-mono bg-base-200 px-3 py-2 rounded-lg break-all">
-                  {burner.address}
-                </code>
-                <button className="btn btn-ghost btn-xs" onClick={copyAddress}>
-                  Copy
-                </button>
-                <a
-                  href={`${explorerBase}/address/${burner.address}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-ghost btn-xs"
-                >
-                  Arcscan ↗
-                </a>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs opacity-70">USDC balance</p>
-                  <p className="text-2xl font-bold font-mono">{balanceDisplay}</p>
+          <div className="rounded-2xl border border-base-300 bg-base-100 p-6 mb-5">
+            <div className="flex items-start justify-between gap-2 mb-4">
+              <div>
+                <div className="text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/45">
+                  Wallet
                 </div>
-                <div>
-                  <p className="text-xs opacity-70">Need at least</p>
-                  <p className="text-2xl font-bold font-mono opacity-60">{REQUIRED_USDC_NUM}</p>
-                </div>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight">Your burner wallet</h2>
               </div>
-              <div className="mt-2 text-xs opacity-50">
-                Polled every {POLL_INTERVAL_MS / 1000} s. Send funds and we&apos;ll auto-detect.
+              <button className="text-xs text-base-content/55 hover:text-base-content" onClick={handleReset}>
+                Reset
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="text-xs sm:text-sm font-mono bg-base-200 border border-base-300 px-3 py-2 rounded-lg break-all">
+                {burner.address}
+              </code>
+              <button
+                className="text-xs text-base-content/55 hover:text-base-content px-2 py-1 border border-base-300 rounded-md hover:border-base-content/25"
+                onClick={copyAddress}
+              >
+                Copy
+              </button>
+              <a
+                href={`${explorerBase}/address/${burner.address}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-base-content/55 hover:text-primary"
+              >
+                Arcscan ↗
+              </a>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-4 border-t border-base-300 pt-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-base-content/45">
+                  USDC balance
+                </p>
+                <p className="mt-1 text-2xl font-bold font-mono tabular-nums">{balanceDisplay}</p>
               </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-base-content/45">
+                  Need at least
+                </p>
+                <p className="mt-1 text-2xl font-bold font-mono tabular-nums text-base-content/50">
+                  {REQUIRED_USDC_NUM}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-base-content/50">
+              Polled every {POLL_INTERVAL_MS / 1000}s. Send funds and we&apos;ll auto-detect.
             </div>
           </div>
 
           {/* Step 2: faucet */}
-          <div className="card bg-base-100 shadow-xl mb-6">
-            <div className="card-body">
-              <h2 className="card-title">Step 2 · Top up from the Circle faucet</h2>
-              <p className="text-sm opacity-70">
-                Circle runs the official Arc Testnet USDC faucet. We&apos;ll pre-fill the address if the form supports
-                it — otherwise paste the address above.
-              </p>
-              <a
-                href={faucetUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={`btn ${hasEnoughFunds ? "btn-success btn-outline" : "btn-primary"} mt-2 self-start`}
-              >
-                {hasEnoughFunds ? "Faucet ✓ (open again)" : `Open faucet for ${REQUIRED_USDC_NUM} USDC →`}
-              </a>
-              <ol className="list-decimal list-inside text-sm opacity-70 mt-2 space-y-1">
-                <li>Pick <span className="font-mono">Arc Testnet</span> on the faucet UI.</li>
-                <li>Paste your burner address (or confirm the pre-filled one).</li>
-                <li>Wait for the drip — balance above auto-refreshes.</li>
-              </ol>
-            </div>
+          <div className="rounded-2xl border border-base-300 bg-base-100 p-6 mb-5">
+            <div className="text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/45">Step 02</div>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">Top up from the Circle faucet</h2>
+            <p className="mt-2 text-sm text-base-content/65 leading-relaxed">
+              Circle runs the official Arc Testnet USDC faucet. We&apos;ll pre-fill the address if the form supports
+              it — otherwise paste the address above.
+            </p>
+            <a
+              href={faucetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={`btn mt-4 self-start ${
+                hasEnoughFunds
+                  ? "bg-success/10 border border-success/30 text-success hover:bg-success/15"
+                  : "btn-primary"
+              }`}
+            >
+              {hasEnoughFunds ? "Faucet ✓ (open again)" : `Open faucet for ${REQUIRED_USDC_NUM} USDC →`}
+            </a>
+            <ol className="list-decimal list-inside text-sm text-base-content/65 mt-4 space-y-1">
+              <li>
+                Pick <span className="font-mono">Arc Testnet</span> on the faucet UI.
+              </li>
+              <li>Paste your burner address (or confirm the pre-filled one).</li>
+              <li>Wait for the drip — balance above auto-refreshes.</li>
+            </ol>
           </div>
 
           {/* Step 3: post milestone */}
-          <div className="card bg-base-100 shadow-xl mb-6">
-            <div className="card-body">
-              <h2 className="card-title">Step 3 · Post a 1-USDC test milestone</h2>
-              <p className="text-sm opacity-70">
-                We&apos;ll fund a single 1-USDC milestone in the on-chain escrow. Two transactions: <code>approve</code>{" "}
-                then <code>createProject</code>. Both pay gas in USDC on Arc.
+          <div className="rounded-2xl border border-base-300 bg-base-100 p-6 mb-5">
+            <div className="text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/45">Step 03</div>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight">Post a 1-USDC test milestone</h2>
+            <p className="mt-2 text-sm text-base-content/65 leading-relaxed">
+              We&apos;ll fund a single 1-USDC milestone in the on-chain escrow. Two transactions:{" "}
+              <code className="font-mono text-xs bg-base-200 border border-base-300 px-1 rounded">approve</code> then{" "}
+              <code className="font-mono text-xs bg-base-200 border border-base-300 px-1 rounded">createProject</code>.
+              Both pay gas in USDC on Arc.
+            </p>
+
+            <label
+              htmlFor="brief"
+              className="block text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/55 mt-5 mb-1.5"
+            >
+              Brief
+            </label>
+            <textarea
+              id="brief"
+              className="textarea w-full min-h-[5rem]"
+              value={brief}
+              onChange={e => setBrief(e.target.value)}
+              disabled={creating || !!created}
+            />
+
+            {defaultAssignee ? (
+              <p className="text-xs text-base-content/65 mt-2">
+                Pre-assigned to: <span className="font-mono text-base-content">{agentLabel ?? defaultAssignee}</span>{" "}
+                <span className="text-base-content/40">(from agents.json)</span>
               </p>
+            ) : (
+              <p className="text-xs text-base-content/65 mt-2">
+                No agents.json published yet — the milestone will land unassigned and wait for any worker daemon to
+                pick it up.
+              </p>
+            )}
 
-              <label htmlFor="brief" className="text-sm font-medium mt-3">
-                Brief
-              </label>
-              <textarea
-                id="brief"
-                className="textarea textarea-bordered w-full min-h-[5rem]"
-                value={brief}
-                onChange={e => setBrief(e.target.value)}
-                disabled={creating || !!created}
-              />
-
-              {defaultAssignee ? (
-                <p className="text-xs opacity-70">
-                  Pre-assigned to: <span className="font-mono">{agentLabel ?? defaultAssignee}</span>{" "}
-                  <span className="opacity-50">(from agents.json)</span>
-                </p>
+            <button
+              className={`btn btn-primary mt-4 ${celebrate ? "animate-pulse" : ""}`}
+              disabled={!hasEnoughFunds || creating || !!created}
+              onClick={handleCreate}
+            >
+              {creating ? (
+                <>
+                  <span className="loading loading-spinner loading-sm" />
+                  Posting…
+                </>
+              ) : created ? (
+                "✓ Posted"
               ) : (
-                <p className="text-xs opacity-70">
-                  No agents.json published yet — the milestone will land unassigned and wait for any worker daemon to
-                  pick it up.
-                </p>
+                `Post test milestone (1 USDC)`
               )}
+            </button>
 
-              <button
-                className={`btn btn-primary mt-2 ${celebrate ? "animate-pulse" : ""}`}
-                disabled={!hasEnoughFunds || creating || !!created}
-                onClick={handleCreate}
-              >
-                {creating ? (
-                  <>
-                    <span className="loading loading-spinner loading-sm" />
-                    Posting…
-                  </>
-                ) : created ? (
-                  "✓ Posted"
-                ) : (
-                  `Post test milestone (1 USDC)`
-                )}
-              </button>
+            {!hasEnoughFunds && !created && (
+              <p className="text-xs text-base-content/55 mt-2">
+                Button unlocks once your burner balance ≥ {REQUIRED_USDC_NUM} USDC.
+              </p>
+            )}
 
-              {!hasEnoughFunds && !created && (
-                <p className="text-xs opacity-70">
-                  Button unlocks once your burner balance ≥ {REQUIRED_USDC_NUM} USDC.
-                </p>
-              )}
-
-              {errorMsg && (
-                <div className="alert alert-error mt-2">
-                  <span className="text-sm">{errorMsg}</span>
-                </div>
-              )}
-            </div>
+            {errorMsg && (
+              <div className="mt-3 rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">
+                {errorMsg}
+              </div>
+            )}
           </div>
 
           {/* Step 4: live status */}
           {created && (
             <div
-              className={`card shadow-xl mb-6 transition-all ${
-                celebrate ? "bg-success/10 ring-2 ring-success" : "bg-base-100"
+              className={`rounded-2xl border bg-base-100 p-6 mb-5 transition-all ${
+                celebrate ? "border-success/40 ring-1 ring-success/30 animate-rise" : "border-base-300"
               }`}
             >
-              <div className="card-body">
-                <div className="flex justify-between items-start">
-                  <h2 className="card-title">
-                    {celebrate ? "🎉 Settled in USDC!" : "Step 4 · Live milestone status"}
-                  </h2>
-                  <a
-                    href={`${explorerBase}/tx/${created.txHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="link link-hover text-xs"
-                  >
-                    tx ↗
-                  </a>
-                </div>
-                <p className="text-xs opacity-70">
-                  {created.projectId !== null ? (
-                    <>
-                      Project <span className="font-mono">#{created.projectId.toString()}</span> ·{" "}
-                      <Link href={`/projects/${created.projectId.toString()}`} className="link">
-                        view in dashboard
-                      </Link>
-                    </>
-                  ) : (
-                    <>Created at {new Date(created.createdAt).toLocaleTimeString()}</>
-                  )}
-                </p>
-
-                {/* Status stepper */}
-                <ul className="steps steps-vertical sm:steps-horizontal w-full mt-3">
-                  {(["Assigned", "Accepted", "Submitted", "Paid"] as const).map(label => {
-                    const stepStatusValue = { Assigned: 1, Accepted: 2, Submitted: 4, Paid: 6 }[label];
-                    const reached = status >= stepStatusValue;
-                    return (
-                      <li
-                        key={label}
-                        className={`step ${reached ? "step-primary" : ""} ${
-                          status === stepStatusValue ? "font-bold" : ""
-                        }`}
-                      >
-                        {label}
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                <div className="mt-4 text-sm space-y-1">
-                  <div>
-                    Current status:{" "}
-                    <span className="badge badge-primary">{STATUS_LABELS[status] ?? "Pending…"}</span>
+              <div className="flex justify-between items-start gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/45">
+                    Step 04
                   </div>
-                  {milestone?.assignee && milestone.assignee !== ZERO_ADDRESS && (
-                    <div className="text-xs opacity-70">
-                      Worker:{" "}
-                      <a
-                        href={`${explorerBase}/address/${milestone.assignee}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="link font-mono"
-                      >
-                        {milestone.assignee}
-                      </a>
-                    </div>
-                  )}
-                  {milestone?.submissionNote && (
-                    <div className="rounded-lg bg-base-200 p-3 mt-2">
-                      <p className="text-xs font-medium opacity-70 mb-1">Deliverable:</p>
-                      <p className="text-sm font-mono break-all">{milestone.submissionNote}</p>
-                    </div>
-                  )}
+                  <h2 className="mt-1 text-lg font-semibold tracking-tight">
+                    {celebrate ? "Settled in USDC" : "Live milestone status"}
+                  </h2>
                 </div>
-
-                {celebrate && (
-                  <div className="mt-3">
-                    <Link href="/leaderboard" className="btn btn-success btn-sm">
-                      See the new leaderboard rank →
+                <a
+                  href={`${explorerBase}/tx/${created.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-base-content/55 hover:text-primary"
+                >
+                  tx ↗
+                </a>
+              </div>
+              <p className="text-xs text-base-content/55 mt-1">
+                {created.projectId !== null ? (
+                  <>
+                    Project <span className="font-mono text-base-content">#{created.projectId.toString()}</span> ·{" "}
+                    <Link href={`/projects/${created.projectId.toString()}`} className="link">
+                      view in dashboard
                     </Link>
+                  </>
+                ) : (
+                  <>Created at {new Date(created.createdAt).toLocaleTimeString()}</>
+                )}
+              </p>
+
+              {/* Status stepper */}
+              <ul className="steps steps-vertical sm:steps-horizontal w-full mt-5">
+                {(["Assigned", "Accepted", "Submitted", "Paid"] as const).map(label => {
+                  const stepStatusValue = { Assigned: 1, Accepted: 2, Submitted: 4, Paid: 6 }[label];
+                  const reached = status >= stepStatusValue;
+                  return (
+                    <li
+                      key={label}
+                      className={`step ${reached ? "step-primary" : ""} ${
+                        status === stepStatusValue ? "font-semibold" : ""
+                      }`}
+                    >
+                      {label}
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="mt-5 text-sm space-y-2 border-t border-base-300 pt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-base-content/55">Current status</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary border border-primary/25 px-2.5 py-0.5 text-xs font-semibold">
+                    <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    {STATUS_LABELS[status] ?? "Pending…"}
+                  </span>
+                </div>
+                {milestone?.assignee && milestone.assignee !== ZERO_ADDRESS && (
+                  <div className="text-xs text-base-content/65">
+                    Worker:{" "}
+                    <a
+                      href={`${explorerBase}/address/${milestone.assignee}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="link font-mono text-base-content"
+                    >
+                      {milestone.assignee}
+                    </a>
+                  </div>
+                )}
+                {milestone?.submissionNote && (
+                  <div className="rounded-lg bg-base-200 border border-base-300 p-3 mt-3">
+                    <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-base-content/45 mb-1">
+                      Deliverable
+                    </p>
+                    <p className="text-sm font-mono break-all">{milestone.submissionNote}</p>
                   </div>
                 )}
               </div>
+
+              {celebrate && (
+                <div className="mt-5">
+                  <Link href="/leaderboard" className="btn btn-primary btn-sm gap-1.5">
+                    See the new leaderboard rank →
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </>
       )}
 
       {/* Footer notes */}
-      <div className="text-xs opacity-60 mt-8 text-center space-y-1">
+      <div className="text-xs text-base-content/50 mt-10 text-center space-y-1">
         <p>
-          Burner key: client-side only · <code>sessionStorage</code> · dies with the tab. Never reuse for anything that
-          matters.
+          Burner key: client-side only ·{" "}
+          <code className="font-mono bg-base-200 border border-base-300 px-1 rounded">sessionStorage</code> · dies
+          with the tab. Never reuse for anything that matters.
         </p>
         <p>
           Want to wire your own agent? See{" "}

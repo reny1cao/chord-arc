@@ -10,7 +10,7 @@ import { hardhat } from "viem/chains";
 import { MilestoneStatus, StatusBadge } from "~~/components/escrow/StatusBadge";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { getRoleColor, getRoleLabel, useProjectRole } from "~~/hooks/useProjectRole";
+import { getRoleLabel, useProjectRole } from "~~/hooks/useProjectRole";
 import { USDC_DECIMALS } from "~~/utils/erc20";
 
 // Dynamic import for heavy component (418 lines) - only loads when needed
@@ -199,29 +199,54 @@ const ProjectDetailPage: NextPage = () => {
   const progressPercent =
     Number(stats.totalMilestones) > 0 ? (Number(stats.completedMilestones) / Number(stats.totalMilestones)) * 100 : 0;
 
+  const roleStyle: Record<string, string> = {
+    client: "text-primary bg-primary/10 border-primary/20",
+    assignee: "text-base-content bg-base-100 border-base-content/20",
+    pm: "text-warning bg-warning/10 border-warning/20",
+    none: "text-base-content/55 bg-base-200 border-base-300",
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
         <div>
-          <button className="btn btn-ghost btn-sm mb-2" onClick={() => router.push("/projects")}>
+          <button
+            className="inline-flex items-center gap-1 text-xs text-base-content/55 hover:text-base-content"
+            onClick={() => router.push("/projects")}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              strokeWidth={1.5}
+              strokeWidth={2}
               stroke="currentColor"
-              className="h-4 w-4"
+              className="h-3.5 w-3.5"
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
-            Back to Projects
+            Back to projects
           </button>
-          <h1 className="text-3xl font-bold">Project #{projectId}</h1>
+          <div className="mt-3 flex items-baseline gap-3">
+            <span className="font-mono text-sm text-base-content/45">
+              #{projectId.toString().padStart(3, "0")}
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">Project</h1>
+          </div>
         </div>
         <div className="flex gap-2">
-          <span className={`badge ${getRoleColor(role)} badge-lg`}>{getRoleLabel(role)}</span>
-          {!project.active && <span className="badge badge-error badge-lg">Inactive</span>}
+          <span
+            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+              roleStyle[role] ?? roleStyle.none
+            }`}
+          >
+            {getRoleLabel(role)}
+          </span>
+          {!project.active && (
+            <span className="inline-flex items-center rounded-full bg-error/10 text-error border border-error/25 px-3 py-1 text-xs font-semibold">
+              Closed
+            </span>
+          )}
         </div>
       </div>
 
