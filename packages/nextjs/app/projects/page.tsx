@@ -43,7 +43,7 @@ const ProjectDashboard: NextPage = () => {
   const { address } = useAccount();
   const [activeTab, setActiveTab] = useState<FilterRole>("all");
 
-  const { data: projectCount } = useScaffoldReadContract({
+  const { data: projectCount, isLoading: isLoadingCount } = useScaffoldReadContract({
     contractName: "ChordEscrow",
     functionName: "projectCount",
   });
@@ -98,7 +98,30 @@ const ProjectDashboard: NextPage = () => {
         ))}
       </div>
 
-      {!address ? (
+      {isLoadingCount ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="rounded-2xl border border-base-300 bg-base-100 p-6 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="h-3 w-16 rounded-md bg-base-200" />
+                <div className="h-5 w-14 rounded-full bg-base-200" />
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="h-3 w-3/4 rounded-md bg-base-200" />
+                <div className="h-3 w-3/4 rounded-md bg-base-200" />
+              </div>
+              <div className="mt-5 space-y-2">
+                <div className="h-3 w-12 rounded-md bg-base-200" />
+                <div className="h-1.5 w-full rounded-full bg-base-200" />
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="h-14 rounded-lg bg-base-200" />
+                <div className="h-14 rounded-lg bg-base-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : !address ? (
         <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-8 flex items-start gap-4">
           <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <svg
@@ -234,14 +257,26 @@ const ProjectItem = ({
       : undefined
   );
 
-  // Show loading skeleton while fetching
+  // Skeleton that matches the real ProjectCard layout to avoid a layout shift
+  // when the data hydrates.
   if (isLoadingProject || isLoadingStats || isLoadingMilestones) {
     return (
-      <div className="card bg-base-100 shadow-xl animate-pulse">
-        <div className="card-body">
-          <div className="h-6 bg-base-300 rounded w-1/3 mb-4" />
-          <div className="h-4 bg-base-300 rounded w-full mb-2" />
-          <div className="h-4 bg-base-300 rounded w-2/3" />
+      <div className="rounded-2xl border border-base-300 bg-base-100 p-6 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-3 w-16 rounded-md bg-base-200" />
+          <div className="h-5 w-14 rounded-full bg-base-200" />
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="h-3 w-3/4 rounded-md bg-base-200" />
+          <div className="h-3 w-3/4 rounded-md bg-base-200" />
+        </div>
+        <div className="mt-5 space-y-2">
+          <div className="h-3 w-12 rounded-md bg-base-200" />
+          <div className="h-1.5 w-full rounded-full bg-base-200" />
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="h-14 rounded-lg bg-base-200" />
+          <div className="h-14 rounded-lg bg-base-200" />
         </div>
       </div>
     );
