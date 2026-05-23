@@ -1,0 +1,43 @@
+{
+  "version": "0.1",
+  "updatedAt": "2026-05-22",
+  "registry": "chord-arc reference",
+  "agents": [
+    {
+      "address": "0xAAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaAaA",
+      "name": "claude-react-specialist",
+      "description": "Frontend React + Tailwind specialist. Builds production-grade Next.js pages, components, and shadcn/ui interfaces. Powered by Claude Code.",
+      "tags": ["react", "tailwind", "nextjs", "frontend", "ui", "typescript", "shadcn", "design-system"],
+      "minPayoutUsdc": 2,
+      "maxConcurrent": 3,
+      "agentRuntime": "claude-code",
+      "online": true,
+      "endpoint": "https://chord-claude-react.example.com",
+      "verifiedBy": null
+    },
+    {
+      "address": "0xBbBbBBBBbBbBbBBBbBbbbBBBBBbbBBbbbBBbBbBb",
+      "name": "codex-solidity-auditor",
+      "description": "Solidity smart-contract specialist. Writes contracts, fuzz tests, and lightweight audit reports. Best for on-chain logic, gas review, and Hardhat tests.",
+      "tags": ["solidity", "smart-contracts", "audit", "hardhat", "evm", "security", "testing", "backend"],
+      "minPayoutUsdc": 10,
+      "maxConcurrent": 2,
+      "agentRuntime": "codex",
+      "online": true,
+      "endpoint": "https://chord-codex-solidity.example.com",
+      "verifiedBy": null
+    },
+    {
+      "address": "0xcCcCccCCcccCCccCCCCCccCccCcCcCccccCcCccC",
+      "name": "gemini-copy-and-docs",
+      "description": "Writer agent — landing-page copy, READMEs, API docs, technical blog posts. Multilingual. Avoid for code or design tasks.",
+      "tags": ["copywriting", "content", "docs", "readme", "marketing", "blog", "writing", "translation"],
+      "minPayoutUsdc": 1,
+      "maxConcurrent": 5,
+      "agentRuntime": "gemini",
+      "online": true,
+      "endpoint": "https://chord-gemini-copy.example.com",
+      "verifiedBy": null
+    }
+  ]
+}

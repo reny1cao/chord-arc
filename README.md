@@ -1,23 +1,32 @@
 <h1 align="center">Chord</h1>
-<p align="center"><em>Autonomous AI agents pick up on-chain milestones, do the work, and get paid in USDC — all on Circle Arc.</em></p>
+<p align="center"><em>An open protocol so any AI agent can find on-chain work and get paid in USDC, settled on Circle Arc.</em></p>
 
 <p align="center">
   <a href="https://github.com/reny1cao/chord-arc/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/reny1cao/chord-arc/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   ·
-  <a href="https://testnet.arcscan.app/">Arc Testnet</a>
+  <a href="https://testnet.arcscan.app/address/0xa07e0229acAd5B3a1643a88474Dec913F9904a14">Live on Arc Testnet</a>
+  ·
+  <a href="./docs/PROTOCOL.md">Protocol v0.1</a>
   ·
   <a href="https://agora.thecanteenapp.com/">Agora Agents Hackathon</a>
   ·
-  <a href="./packages/daemon/README.md">Daemon</a>
+  <a href="./packages/daemon/README.md">Reference daemon</a>
 </p>
 
 ---
 
 ## Why
 
-Posting a freelance gig and paying an AI agent for it shouldn't require Stripe accounts, KYC roundtrips, or trust. Chord splits work into milestones, escrows USDC per milestone on Circle Arc, and lets any agent with a Circle wallet pick up tasks and earn — without a human in the loop.
+Posting a gig and paying an AI agent for it shouldn't require Stripe accounts, KYC roundtrips, or trust. Chord is a tiny on-chain protocol: one Solidity contract holds USDC in milestone-shaped escrows, agents subscribe to events to discover work, and an off-chain `agents.json` registry lets clients (or a routing agent) pick the right worker.
 
-The clients post. The agents work. The chain settles.
+This repo ships:
+- the **protocol spec** ([`docs/PROTOCOL.md`](./docs/PROTOCOL.md)) — what an interoperable agent needs to know
+- the **reference contract** — `ChordEscrow.sol`, live on Arc Testnet
+- a **reference worker daemon** that wraps any coding-agent CLI (Claude Code, Codex, Gemini, …) into a paid Chord worker
+- a **reference PM agent** that uses Kimi to route new milestones to whichever registered worker fits best — itself paid in USDC per assignment
+- a **public faucet UI** so anyone can post a real test milestone and watch an agent fulfill it in 30 seconds
+
+The clients post. The agents route. The agents work. The chain settles. Everything is USDC, everything is Arc.
 
 ## How it works
 
@@ -160,11 +169,13 @@ CHORD_DAEMON_NAME=specialist-react     # any friendly label
 [Agora Agents Hackathon](https://agora.thecanteenapp.com/) — Canteen × Circle. Submission deadline 2026-05-25.
 
 Hackathon planning docs live in `docs/`:
+- [`docs/PROTOCOL.md`](./docs/PROTOCOL.md) — Chord Protocol v0.1 public spec (on-chain interface + `agents.json` registry schema)
 - [`docs/SUBMISSION.md`](./docs/SUBMISSION.md) — checklist tracking readiness against the four judging axes
 - [`docs/DEMO.md`](./docs/DEMO.md) — 3-minute Loom storyboard
 - [`docs/SEED.md`](./docs/SEED.md) — plan for seeding honest testnet volume (the Traction axis)
 - [`docs/CIRCLE_QUICKSTART.md`](./docs/CIRCLE_QUICKSTART.md) — 30-min walkthrough to provision Circle Wallets credentials and create your first SCA on `ARC-TESTNET`
-- [`docs/HANDOFF.md`](./docs/HANDOFF.md) — runbook from "fresh clone" to "submitted" in 11 numbered steps
+- [`docs/HANDOFF.md`](./docs/HANDOFF.md) — runbook from "fresh clone" to "submitted"
+- [`docs/VERCEL.md`](./docs/VERCEL.md) — deploy the frontend to Vercel
 
 ## Inspiration
 

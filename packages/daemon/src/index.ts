@@ -4,6 +4,7 @@ import type { Address, Hex } from "viem";
 import { discoverAgentCli } from "./agent-discovery.js";
 import { runAgentForMilestone } from "./agent-runner.js";
 import { readMilestone, watchMilestoneAssigned } from "./chain.js";
+import { runPmAgent } from "./pm-agent.js";
 import {
   createCircleClient,
   getWalletAddress as getCircleAddress,
@@ -190,9 +191,12 @@ async function buildSigner(): Promise<Signer> {
   };
 }
 
-async function main(): Promise<void> {
-  console.log(`[chord] daemon=${config.daemonName} arcChainId=${config.arcChainId}`);
-
+/**
+ * Worker-mode main. Watches `MilestoneAssigned` for this SCA and runs the
+ * accept → spawn → submit lifecycle. This is what runs when `--pm` is NOT
+ * passed.
+ */
+async function runWorkerMode(): Promise<void> {
   const cli = await discoverAgentCli({
     candidates: config.agentCandidates,
     override: config.agentOverride,
@@ -219,7 +223,7 @@ async function main(): Promise<void> {
   const signer = await buildSigner();
   const sca = signer.address;
   state.setSca(sca);
-  sse.emit("ready", { sca, escrow, cli: cli.name, signerMode: signer.mode });
+  sse.emit("ready", { sca, escrow, cli: cli.name, signerMode: signer.mode, role: "worker" });
 
   // watch for assignments
   const unwatch = watchMilestoneAssigned({
@@ -244,21 +248,79 @@ async function main(): Promise<void> {
     },
   });
 
-  // graceful shutdown
+  installShutdown([unwatch], sse.stop, state.flush);
+  console.log("[chord] watching MilestoneAssigned. Ctrl-C to stop.");
+}
+
+/**
+ * PM-mode main. Skips agent-CLI discovery entirely (a routing agent doesn't
+ * need a coding CLI). Boots the SCA, loads agents.json, watches
+ * `ProjectCreated` where `pm == sca`, and signs `assignMilestone` for each.
+ */
+async function runPmMode(): Promise<void> {
+  assertReadyForChain();
+  const escrow = config.chordEscrowAddress as Address;
+
+  const state = await loadState(config.dataDir);
+
+  const sse = startServer({ snapshot: () => state.get() });
+  console.log(`[chord:pm] dashboard: http://localhost:${sse.port}`);
+
+  const signer = await buildSigner();
+  const sca = signer.address;
+  state.setSca(sca);
+  sse.emit("ready", { sca, escrow, signerMode: signer.mode, role: "pm" });
+
+  const unwatch = await runPmAgent({
+    signer,
+    escrow,
+    state,
+    emit: sse.emit,
+    idempotencyKey,
+  });
+
+  installShutdown([unwatch], sse.stop, state.flush);
+}
+
+/** Shared graceful-shutdown wiring used by both runWorkerMode and runPmMode. */
+function installShutdown(
+  unwatchers: Array<() => void>,
+  stopSse: () => Promise<void>,
+  flushState: () => Promise<void>,
+): void {
   let shuttingDown = false;
   const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
     console.log(`[chord] ${signal} → shutting down...`);
-    unwatch();
-    await sse.stop();
-    await state.flush();
+    for (const fn of unwatchers) {
+      try {
+        fn();
+      } catch {
+        /* ignore */
+      }
+    }
+    await stopSse();
+    await flushState();
     process.exit(0);
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+}
 
-  console.log("[chord] watching MilestoneAssigned. Ctrl-C to stop.");
+async function main(): Promise<void> {
+  // Top-level dispatch so PM mode bypasses agent-CLI discovery entirely.
+  const isPm = process.argv.includes("--pm");
+  const roleLabel = isPm ? "pm" : "worker";
+  console.log(
+    `[chord] daemon=${config.daemonName} role=${roleLabel} arcChainId=${config.arcChainId}`,
+  );
+
+  if (isPm) {
+    await runPmMode();
+  } else {
+    await runWorkerMode();
+  }
 }
 
 main().catch(err => {

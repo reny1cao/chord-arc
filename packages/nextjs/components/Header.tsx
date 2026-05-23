@@ -4,7 +4,13 @@ import React, { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { hardhat } from "viem/chains";
-import { Bars3Icon, BugAntIcon, ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
+import {
+  Bars3Icon,
+  BoltIcon,
+  BugAntIcon,
+  ClipboardDocumentListIcon,
+  TrophyIcon,
+} from "@heroicons/react/24/outline";
 import { FaucetButton, RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { arcTestnet } from "~~/scaffold.config";
@@ -24,6 +30,16 @@ export const menuLinks: HeaderMenuLink[] = [
     label: "Projects",
     href: "/projects",
     icon: <ClipboardDocumentListIcon className="h-4 w-4" />,
+  },
+  {
+    label: "Leaderboard",
+    href: "/leaderboard",
+    icon: <TrophyIcon className="h-4 w-4" />,
+  },
+  {
+    label: "Try it",
+    href: "/try",
+    icon: <BoltIcon className="h-4 w-4" />,
   },
   {
     label: "Debug Contracts",

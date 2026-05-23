@@ -85,3 +85,63 @@ The test uses Hardhat's deterministic default accounts:
 - `account[1]` = worker (the daemon's `CHORD_LOCAL_PRIVATE_KEY`)
 
 `scripts/fake-agent.sh` stands in for `claude` / `codex` / etc. — it accepts both `-p <text>` and a positional file path so it works regardless of which agent-runner code path fires for it.
+
+## PM Agent (`--pm`)
+
+This daemon doubles as the reference **PM (routing) agent** described in [PROTOCOL.md §6](../../docs/PROTOCOL.md#6-routing-agents). A PM watches `ProjectCreated` events where it is named as the project's PM, then calls `assignMilestone` once per milestone — picking a worker by asking Kimi to match the milestone description against the agents.json capability registry.
+
+The PM is itself paid in USDC: it earns its project's `pmFeeBps` (default `500` = 5%) out of every approved milestone. Routing is the recursive primitive — **agents paying agents to coordinate other agents, all settled on-chain**.
+
+### Run
+
+```bash
+# requires the same signer env as the worker (Circle or CHORD_LOCAL_PRIVATE_KEY)
+yarn workspace @chord/daemon pm
+# under the hood: tsx src/index.ts --pm
+```
+
+Top-level argv dispatch keeps the two modes cleanly separated — PM mode never runs the agent-CLI discovery step (a routing agent doesn't spawn coding CLIs).
+
+### Extra env
+
+```
+CHORD_AGENTS_JSON=<url|path>           # default: https://raw.githubusercontent.com/reny1cao/chord-arc/main/packages/daemon/agents.json
+CHORD_PM_FEE_BPS=500                   # informational only; actual fee set per-project at createProject
+KIMI_API_KEY=...                       # Moonshot key — same env the nextjs splitter uses
+KIMI_BASE_URL=https://api.moonshot.cn/v1
+KIMI_MODEL=moonshot-v1-8k
+```
+
+`CHORD_AGENTS_JSON` resolves in three modes:
+- `https://…` / `http://…` → global `fetch`
+- `file:///abs/path` or `/abs/path` → `fs.readFile`
+- anything else → resolved relative to the daemon package root (so `agents.json` works out of the box)
+
+### Routing pipeline
+
+For each milestone in a new `ProjectCreated`:
+
+1. **Read** the milestone; skip if `assignee != 0x0` (it came in via `initialAssignees[]`) or status is past `Created`.
+2. **Filter** the registry: `online == true` AND `milestoneAmount >= minPayoutUsdc` AND `inFlightForAgent < maxConcurrent`. In-flight is counted from local state — restarts don't double-assign.
+3. **Ask Kimi**: send the candidate list + milestone description with strict-JSON instructions. The description is wrapped in `--- MILESTONE DESCRIPTION (untrusted) ---` delimiters per [PROTOCOL §8](../../docs/PROTOCOL.md#8-security-considerations) to defend against prompt injection.
+4. **Validate**: the address Kimi returns MUST checksum-match a candidate. Hallucinated addresses are rejected outright — there is no fallback that picks a "close" agent. Failure surfaces as a `routing-decision { ok: false, reason }` SSE event and a warning log; the milestone stays unrouted.
+5. **Sign** `assignMilestone(projectId, milestoneIndex, pick)`. The Circle idempotency key hashes the pick so a different routing decision on retry actually produces a fresh tx.
+
+### SSE events emitted in PM mode
+
+| Event | When |
+|---|---|
+| `pm-ready` | Boot — payload includes the loaded registry and PM address |
+| `project-detected` | A `ProjectCreated` for this PM lands on-chain |
+| `routing-skipped` | Milestone already assigned or past `Created` |
+| `routing-considering` | About to ask Kimi — payload includes the candidate slate |
+| `routing-decision` | Kimi answered — payload includes `pick`, `rationale`, `latencyMs` (or the failure reason) |
+| `routing-tx-submitted` | `assignMilestone` was signed and queued |
+| `routing-tx-confirmed` | `assignMilestone` mined on Arc |
+| `routing-tx-failed` | Signer/chain error during the assignMilestone path |
+
+The reference frontend can subscribe to `/events` and surface "Kimi assigned milestone X to agent Y because Z" in real time.
+
+### agents.json — the reference registry
+
+Shipped at [`packages/daemon/agents.json`](./agents.json) (also published at the canonical raw URL above). v0.1 schema is documented in [PROTOCOL.md §3](../../docs/PROTOCOL.md#3-off-chain-interface--agentsjson-capability-registry). The reference file ships with three placeholder workers (`0xAA…` / `0xBB…` / `0xCC…`) — replace with real SCAs after running `yarn bootstrap-sca --name <label>` for each.

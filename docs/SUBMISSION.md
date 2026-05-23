@@ -15,30 +15,38 @@ Deadline: **2026-05-25**. Today: 2026-05-22. Asynchronous review, multiple submi
 
 ## Judging — track readiness per axis
 
-### Agentic Sophistication — 30% (target: 27/30)
+### Agentic Sophistication — 30% (target: 28/30 after D2.5)
 - [x] Architecture: daemon scans PATH for any coding-agent CLI (Claude Code / Codex / Gemini / Cursor / OpenCode / Qwen / Kimi)
 - [x] On-chain trigger: `MilestoneAssigned` event spawns the agent — not a button click
-- [ ] Autonomy proof: at least one full loop (assign → accept → spawn → submit → approve → paid) shown end-to-end in the demo
-- [ ] Three agents working in parallel on different milestones in the same project (visual differentiator)
-- [ ] Optional: a PM daemon that auto-assigns milestones to whichever agent is least busy
+- [x] D2.5 — **Reference PM Agent** that uses Kimi to autonomously route each milestone to the best registered worker. Recursive payment in USDC.
+- [ ] Autonomy proof: at least one full loop (PM assigns → worker accepts → spawns → submits → client approves → paid) shown end-to-end in the demo
+- [ ] Three workers in parallel on different milestones in the same project (visual differentiator — multiple daemon terminals tiled in demo)
 
-### Traction — 30% (target: 18/30, our biggest gap)
-- [ ] At least 5 real testnet milestones funded + completed by demo time. Plan: DM 3 friends today, run a "post your gig get paid 0.5 USDC" promo.
-- [ ] arcscan project page link in README + submission (visible on-chain volume)
-- [ ] A 1-line tracker in README: "23 milestones · 47 USDC settled · 8 SCAs paid"
-- [ ] (Stretch) Discord channel or X thread with at least 1 outside user reporting they tried it
+### Traction — 30% (target: 22/30 after D2.5)
+- [x] D2.5 — `/leaderboard` page indexes live arcscan data, public discoverable
+- [x] D2.5 — `/try` page with burner-wallet faucet flow: anyone can post a 1-USDC test milestone without bringing their own wallet
+- [ ] At least 5 real testnet milestones funded by ≥3 distinct addresses before recording
+- [ ] arcscan project page link in README + submission
+- [ ] Live counter on the home page using leaderboard data: "Chord ↻ N milestones · M USDC settled · K agents earning"
+- [ ] DM ≥3 friends with the `/try` URL today
 
 ### Circle Tools — 20% (target: 18/20)
 - [x] USDC as escrow asset on Arc Testnet
-- [x] Arc Testnet (chain 5042002) as deployment target
-- [x] Circle Programmable Wallets — Dev-Controlled SCAs via Wallets API, one per daemon
-- [ ] (Stretch) CCTP v2 withdraw button — "send your USDC to Base" (advisor says cut from MVP; only add if D2 is green by Wednesday 5pm)
+- [x] Arc Testnet (chain 5042002) as deployment target, ChordEscrow live at `0xa07e0229acAd5B3a1643a88474Dec913F9904a14`
+- [x] Circle Programmable Wallets — Dev-Controlled SCAs via Wallets API, one per daemon (incl. PM agent)
 - [x] USDC is gas on Arc — no separate native token; daemon never has to manage two assets
+- [ ] Demo names every Circle product used out loud (judges are listening for this)
 
-### Innovation — 20% (target: 18/20)
+### Innovation — 20% (target: 20/20 after D2.5)
 - [x] Concept that hasn't been shipped: CLI coding agents as paid on-chain workers
+- [x] D2.5 — **Chord Protocol v0.1** published at `docs/PROTOCOL.md` — Chord is a *protocol*, not just an app. Anyone can write a worker in any language.
+- [x] D2.5 — Recursive agent coordination: PM Agent gets paid in USDC for routing work to other agents
 - [x] Daemon architecture borrowed from Open Design but applied to a brand-new vertical (work-for-pay, not design generation)
-- [ ] Demo must lead with the "no human in the loop" frame — judges have backgrounds at Solana / Coinbase / Circle / Protocol Labs and need a one-line hook
+- [ ] Demo opens with the protocol framing — "this is an open standard, the daemon is just one reference impl"
+
+### Score projection
+- Ceiling without D2.5 stretches: ~67/100
+- Ceiling with PM Agent + Leaderboard + Faucet + Protocol spec: **~85/100**
 
 ## Sponsor tracks (RFBs) — none literal-match
 Agora's 6 problem areas are: perpetuals trading, prediction markets, prediction-market verticals, adaptive portfolio, cross-platform arbitrage, social trading. Chord fits none of these directly. **We pitch as novel category — "agent-to-agent payment rails for work."**

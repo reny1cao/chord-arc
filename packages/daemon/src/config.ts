@@ -41,6 +41,26 @@ export const config = {
   // Order = preference: first available is used unless CHORD_AGENT_CLI overrides.
   agentCandidates: ["claude", "codex", "gemini", "cursor-agent", "opencode", "qwen", "kimi"] as const,
   agentOverride: process.env.CHORD_AGENT_CLI || "",
+
+  // ---- PM agent (--pm mode) ----
+  // Location of the agents.json capability registry the PM router consults.
+  // Accepts: https?:// URL, file:// URL, absolute path, or a path relative to
+  // this package's root (e.g. "agents.json"). See `agents-registry.ts`.
+  agentsJsonUrl:
+    process.env.CHORD_AGENTS_JSON ||
+    "https://raw.githubusercontent.com/reny1cao/chord-arc/main/packages/daemon/agents.json",
+
+  // Default PM fee in basis points. Informational only — the actual fee for
+  // any project is whatever the client set at createProject time. Surfaced so
+  // PM operators can advertise their rate alongside their agents.json entry.
+  pmFeeBps: Number(process.env.CHORD_PM_FEE_BPS || 500),
+
+  // Kimi (Moonshot) routing brain. Same env vars the nextjs splitter uses.
+  kimi: {
+    apiKey: process.env.KIMI_API_KEY || "",
+    baseUrl: process.env.KIMI_BASE_URL || "https://api.moonshot.cn/v1",
+    model: process.env.KIMI_MODEL || "moonshot-v1-8k",
+  },
 };
 
 export function assertReadyForChain(): void {

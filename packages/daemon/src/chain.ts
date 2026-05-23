@@ -110,6 +110,84 @@ export function watchMilestoneAssigned(opts: WatchMilestoneAssignedOpts): () => 
   return unwatch;
 }
 
+export interface ProjectCreatedEvent {
+  projectId: bigint;
+  client: Address;
+  pm: Address;
+  pmFeeBps: bigint;
+  totalAmount: bigint;
+  milestoneCount: bigint;
+  blockNumber: bigint;
+  transactionHash: Hex;
+}
+
+export interface WatchProjectCreatedOpts {
+  escrowAddress: Address;
+  /** PM address (this daemon's SCA). The `pm` field is NOT indexed on-chain, so
+   *  the filter is applied client-side inside `onLogs`. */
+  myPM: Address;
+  onMatch: (event: ProjectCreatedEvent) => void;
+  onError?: (err: Error) => void;
+}
+
+/**
+ * Subscribe to `ProjectCreated` and surface only events where `pm == myPM`.
+ *
+ * Why no server-side filter: ChordEscrow declares `pm` WITHOUT `indexed`, so
+ * viem can't put it in the LOG topics. The full event stream still arrives
+ * (the chain emits with two indexed args + a non-indexed data blob), and we
+ * checksum-compare the decoded `pm` arg before calling `onMatch`.
+ *
+ * For a busy chain a real PM would want a separate indexer; v0.1 is fine
+ * watching the whole stream — testnet event volume on ChordEscrow is tiny.
+ */
+export function watchProjectCreated(opts: WatchProjectCreatedOpts): () => void {
+  const myPm = getAddress(opts.myPM);
+  const unwatch = publicClient.watchContractEvent({
+    address: getAddress(opts.escrowAddress),
+    abi: chordEscrowAbi,
+    eventName: "ProjectCreated",
+    onLogs: logs => {
+      for (const log of logs) {
+        const args = log.args as {
+          projectId?: bigint;
+          client?: Address;
+          pm?: Address;
+          pmFeeBps?: bigint;
+          totalAmount?: bigint;
+          milestoneCount?: bigint;
+        };
+        if (
+          args.projectId === undefined ||
+          args.client === undefined ||
+          args.pm === undefined ||
+          args.pmFeeBps === undefined ||
+          args.totalAmount === undefined ||
+          args.milestoneCount === undefined
+        ) {
+          continue;
+        }
+        if (getAddress(args.pm) !== myPm) continue;
+        opts.onMatch({
+          projectId: args.projectId,
+          client: args.client,
+          pm: args.pm,
+          pmFeeBps: args.pmFeeBps,
+          totalAmount: args.totalAmount,
+          milestoneCount: args.milestoneCount,
+          blockNumber: log.blockNumber ?? 0n,
+          transactionHash: log.transactionHash ?? ("0x" as Hex),
+        });
+      }
+    },
+    onError: err => {
+      if (opts.onError) opts.onError(err);
+      else console.warn("[chord:chain] watchProjectCreated error:", err);
+    },
+  });
+  return unwatch;
+}
+
 export interface ReadMilestoneResult {
   description: string;
   amount: bigint;

@@ -21,6 +21,23 @@ export const chordEscrowAbi = [
     ],
     anonymous: false,
   },
+  // PM agents subscribe to this so they can route each new project's milestones.
+  // NOTE: `pm` is NOT indexed on-chain — the watcher in `chain.ts` must filter
+  // client-side. Don't add `indexed: true` here; viem topic encoding would then
+  // diverge from the on-chain event and the filter would match nothing.
+  {
+    type: "event",
+    name: "ProjectCreated",
+    inputs: [
+      { name: "projectId", type: "uint256", indexed: true },
+      { name: "client", type: "address", indexed: true },
+      { name: "pm", type: "address", indexed: false },
+      { name: "pmFeeBps", type: "uint256", indexed: false },
+      { name: "totalAmount", type: "uint256", indexed: false },
+      { name: "milestoneCount", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
   {
     type: "event",
     name: "MilestoneAccepted",
@@ -61,6 +78,19 @@ export const chordEscrowAbi = [
       { name: "projectId", type: "uint256" },
       { name: "milestoneIndex", type: "uint256" },
       { name: "note", type: "string" },
+    ],
+    outputs: [],
+  },
+
+  // ---- function the PM agent signs ----
+  {
+    type: "function",
+    name: "assignMilestone",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "projectId", type: "uint256" },
+      { name: "milestoneIndex", type: "uint256" },
+      { name: "assignee", type: "address" },
     ],
     outputs: [],
   },

@@ -73,34 +73,49 @@ CIRCLE_API_KEY=TEST_API_KEY:...
 CIRCLE_ENTITY_SECRET=<64-char hex>
 ```
 
-### 6 — Create your first agent SCA (2 min)
+### 6 — Create your SCAs (5 min)
+
+You need **one SCA per agent persona**, plus optionally one PM agent SCA if you want autonomous routing in the demo.
 
 ```bash
+# Worker SCAs
 yarn workspace @chord/daemon bootstrap-sca --name claude-react
+yarn workspace @chord/daemon bootstrap-sca --name codex-content
+yarn workspace @chord/daemon bootstrap-sca --name gemini-design
+
+# Optional but recommended: a PM routing agent
+yarn workspace @chord/daemon bootstrap-sca --name chord-pm
 ```
 
-Paste the printed `CIRCLE_WALLET_SET_ID` + `CIRCLE_WALLET_ID` into `packages/daemon/.env`. Drip USDC to the printed `ARC_SCA_ADDRESS` from the faucet.
+Each bootstrap prints a paste-ready env block. Save the worker wallet IDs (you'll start one daemon per worker); save the PM wallet ID separately. Drip 10 USDC from the Circle faucet to every printed `ARC_SCA_ADDRESS`.
 
-Repeat for 2 more agents (different `--name`) if you want parallel agents in the demo.
+Then update `packages/daemon/agents.json` — replace the placeholder `0xAA…` / `0xBB…` / `0xCC…` addresses with the real SCA addresses of your worker daemons. Commit + push so the leaderboard and PM agent can fetch it from `raw.githubusercontent.com`.
 
 ### 7 — First end-to-end run on Arc (10 min)
 
-Three terminals:
+Five terminals (one per worker daemon, one for PM, one for frontend):
 
 ```bash
-# T1 — daemon
-yarn daemon
+# T1 — worker daemon 1
+CIRCLE_WALLET_ID=<claude-react-wallet-id> CHORD_DAEMON_NAME=claude-react yarn daemon
 
-# T2 — frontend
+# T2 — worker daemon 2
+CIRCLE_WALLET_ID=<codex-content-wallet-id> CHORD_DAEMON_NAME=codex-content yarn daemon
+
+# T3 — worker daemon 3
+CIRCLE_WALLET_ID=<gemini-design-wallet-id> CHORD_DAEMON_NAME=gemini-design yarn daemon
+
+# T4 — PM agent (autonomous router)
+CIRCLE_WALLET_ID=<chord-pm-wallet-id> CHORD_DAEMON_NAME=chord-pm KIMI_API_KEY=<key> \
+  yarn workspace @chord/daemon pm
+
+# T5 — frontend
 yarn start
-
-# Open http://localhost:3000 → connect wallet → post a single-milestone project →
-# assign the milestone to your SCA address → fund + create →
-# watch the daemon terminal accept, run fake agent (or real Claude Code if on PATH), submit →
-# back in the UI, click "Approve milestone" → USDC arrives in the SCA
 ```
 
-If you have Claude Code on `PATH`, the daemon will use it automatically. Otherwise it falls back to whichever CLI it discovers (codex, gemini, …). For the demo, install Claude Code or symlink `packages/daemon/scripts/fake-agent.sh` to a name on PATH like `chordfake`.
+Open http://localhost:3000 → connect wallet → post a 3-milestone project, set PM to your `chord-pm` SCA address, leave assignees blank → fund + create. PM agent will see `ProjectCreated`, route each milestone to the best worker via Kimi, and assign on chain. Worker daemons see their `MilestoneAssigned`, accept, spawn their CLI, submit. Approve each milestone in the UI. USDC flows to every wallet — workers, PM, all in one go.
+
+If you have Claude Code on `PATH`, the daemons will use it automatically. Otherwise they fall back to whichever CLI is discoverable. For the demo, install Claude Code or symlink `packages/daemon/scripts/fake-agent.sh` to a name on PATH like `chordfake`.
 
 ### 8 — Seed traction (30 min)
 
