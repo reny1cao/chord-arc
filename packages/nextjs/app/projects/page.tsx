@@ -99,27 +99,8 @@ const ProjectDashboard: NextPage = () => {
       </div>
 
       {isLoadingCount ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="rounded-2xl border border-base-300 bg-base-100 p-6 animate-pulse">
-              <div className="flex items-center justify-between">
-                <div className="h-3 w-16 rounded-md bg-base-200" />
-                <div className="h-5 w-14 rounded-full bg-base-200" />
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="h-3 w-3/4 rounded-md bg-base-200" />
-                <div className="h-3 w-3/4 rounded-md bg-base-200" />
-              </div>
-              <div className="mt-5 space-y-2">
-                <div className="h-3 w-12 rounded-md bg-base-200" />
-                <div className="h-1.5 w-full rounded-full bg-base-200" />
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="h-14 rounded-lg bg-base-200" />
-                <div className="h-14 rounded-lg bg-base-200" />
-              </div>
-            </div>
-          ))}
+        <div className="space-y-3">
+          {[0, 1, 2].map(i => <ProjectRowSkeleton key={i} />)}
         </div>
       ) : !address ? (
         <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-8 flex items-start gap-4">
@@ -158,15 +139,73 @@ const ProjectDashboard: NextPage = () => {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {projectIds.map(id => (
-            <ProjectItem key={id} projectId={id} filterRole={activeTab} />
-          ))}
-        </div>
+        <>
+          <div className="projects-list space-y-3">
+            {projectIds.map(id => (
+              <ProjectItem key={id} projectId={id} filterRole={activeTab} />
+            ))}
+          </div>
+          {activeTab !== "all" && (
+            <div className="projects-empty-filter mt-3 rounded-2xl border border-base-300 bg-base-100 px-6 py-12 text-center">
+              <div className="text-[11px] uppercase tracking-[0.18em] font-semibold text-base-content/45">
+                No matches
+              </div>
+              <h3 className="mt-3 text-xl font-semibold tracking-tight">
+                You&apos;re not the {filterLabel(activeTab)} on any project yet
+              </h3>
+              <p className="mt-2 text-sm text-base-content/65 max-w-md mx-auto">
+                Switch the filter back to <button onClick={() => setActiveTab("all")} className="link">All</button> to
+                see every project on this contract, or post a new project to take the role.
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 };
+
+const filterLabel = (role: FilterRole) => {
+  switch (role) {
+    case "client":
+      return "client";
+    case "assignee":
+      return "worker";
+    case "pm":
+      return "PM";
+    default:
+      return "filter";
+  }
+};
+
+const ProjectRowSkeleton = () => (
+  <div className="rounded-xl border border-base-300 bg-base-100 px-5 py-4 sm:px-6 sm:py-5 animate-pulse">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-center">
+      <div className="lg:col-span-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-10 rounded-md bg-base-200" />
+          <div className="h-4 w-20 rounded-md bg-base-200" />
+        </div>
+        <div className="h-5 w-14 rounded-full bg-base-200" />
+      </div>
+      <div className="lg:col-span-3 space-y-2">
+        <div className="h-2.5 w-10 rounded-md bg-base-200" />
+        <div className="h-3 w-28 rounded-md bg-base-200" />
+      </div>
+      <div className="lg:col-span-3 space-y-2">
+        <div className="h-2.5 w-12 rounded-md bg-base-200" />
+        <div className="h-1.5 w-full rounded-full bg-base-200" />
+      </div>
+      <div className="lg:col-span-3 flex items-center justify-end gap-5">
+        <div className="space-y-1.5">
+          <div className="h-3.5 w-16 rounded-md bg-base-200" />
+          <div className="h-2.5 w-20 rounded-md bg-base-200" />
+        </div>
+        <div className="h-4 w-4 rounded-md bg-base-200" />
+      </div>
+    </div>
+  </div>
+);
 
 // Separate component to fetch individual project data
 const ProjectItem = ({
@@ -257,29 +296,10 @@ const ProjectItem = ({
       : undefined
   );
 
-  // Skeleton that matches the real ProjectCard layout to avoid a layout shift
-  // when the data hydrates.
+  // Skeleton matching the new row layout — keeps a stable height + no flash
+  // while the per-project contract reads hydrate.
   if (isLoadingProject || isLoadingStats || isLoadingMilestones) {
-    return (
-      <div className="rounded-2xl border border-base-300 bg-base-100 p-6 animate-pulse">
-        <div className="flex items-center justify-between">
-          <div className="h-3 w-16 rounded-md bg-base-200" />
-          <div className="h-5 w-14 rounded-full bg-base-200" />
-        </div>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="h-3 w-3/4 rounded-md bg-base-200" />
-          <div className="h-3 w-3/4 rounded-md bg-base-200" />
-        </div>
-        <div className="mt-5 space-y-2">
-          <div className="h-3 w-12 rounded-md bg-base-200" />
-          <div className="h-1.5 w-full rounded-full bg-base-200" />
-        </div>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="h-14 rounded-lg bg-base-200" />
-          <div className="h-14 rounded-lg bg-base-200" />
-        </div>
-      </div>
-    );
+    return <ProjectRowSkeleton />;
   }
 
   // If data not valid, skip

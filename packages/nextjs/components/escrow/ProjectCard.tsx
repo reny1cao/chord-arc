@@ -26,7 +26,7 @@ const roleStyle: Record<ProjectRole, string> = {
   client: "text-primary bg-primary/10",
   assignee: "text-base-content bg-base-200 border border-base-300",
   pm: "text-warning bg-warning/10",
-  none: "text-base-content/55 bg-base-200",
+  none: "text-base-content/55 bg-base-200 border border-base-300",
 };
 
 export const ProjectCard = ({
@@ -47,93 +47,94 @@ export const ProjectCard = ({
   const unassignedCount = milestoneCount - assignedMilestones - completedMilestones;
   const totalDisplay = formatUnits(totalAmount, USDC_DECIMALS);
   const remainingDisplay = formatUnits(remainingAmount, USDC_DECIMALS);
+  const hasPm = pm && pm !== ZERO_ADDRESS;
 
   return (
     <article
       onClick={() => router.push(`/projects/${projectId}`)}
-      className="group relative cursor-pointer rounded-2xl border border-base-300 bg-base-100 p-6 transition-all hover:border-base-content/15 hover:shadow-lift hover:-translate-y-0.5"
+      className="group relative cursor-pointer rounded-xl border border-base-300 bg-base-100 px-5 py-4 sm:px-6 sm:py-5 hover:border-base-content/20 hover:bg-base-100/80 transition-colors"
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs text-base-content/45">#{projectId.toString().padStart(3, "0")}</span>
-          <h2 className="font-semibold tracking-tight">Project</h2>
-        </div>
-        <div className="flex gap-1.5">
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleStyle[role]}`}
-          >
-            {getRoleLabel(role)}
-          </span>
-          {!active && (
-            <span className="inline-flex items-center rounded-full bg-error/10 text-error px-2 py-0.5 text-[11px] font-semibold">
-              Closed
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 lg:items-center">
+        {/* Title + role */}
+        <div className="lg:col-span-3 flex flex-col gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-xs text-base-content/45 tabular-nums">
+              #{projectId.toString().padStart(3, "0")}
             </span>
+            <h3 className="font-semibold tracking-tight">Project</h3>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${roleStyle[role]}`}
+            >
+              {getRoleLabel(role)}
+            </span>
+            {!active && (
+              <span className="inline-flex items-center rounded-full bg-error/10 text-error px-2 py-0.5 text-[11px] font-semibold">
+                Closed
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Parties */}
+        <div className="lg:col-span-3 min-w-0 space-y-2" onClick={e => e.stopPropagation()}>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45 mb-1">
+              Client
+            </p>
+            <div className="address-mono">
+              <Address address={client} size="xs" />
+            </div>
+          </div>
+          {hasPm && (
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45 mb-1">
+                Project manager
+              </p>
+              <div className="address-mono">
+                <Address address={pm} size="xs" />
+              </div>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Parties */}
-      <dl className="mt-5 grid grid-cols-2 gap-3 text-xs">
-        <div onClick={e => e.stopPropagation()} className="address-mono">
-          <dt className="text-base-content/45 uppercase tracking-[0.12em] text-[10px] font-semibold mb-1">Client</dt>
-          <dd>
-            <Address address={client} size="xs" />
-          </dd>
-        </div>
-        {pm && pm !== ZERO_ADDRESS && (
-          <div onClick={e => e.stopPropagation()} className="address-mono">
-            <dt className="text-base-content/45 uppercase tracking-[0.12em] text-[10px] font-semibold mb-1">PM</dt>
-            <dd>
-              <Address address={pm} size="xs" />
-            </dd>
+        {/* Progress */}
+        <div className="lg:col-span-3">
+          <div className="flex items-baseline justify-between text-xs mb-1.5">
+            <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">
+              Progress
+            </span>
+            <span className="font-mono text-base-content/75 tabular-nums">
+              {completedMilestones}/{milestoneCount}
+            </span>
           </div>
-        )}
-      </dl>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-base-300">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          {unassignedCount > 0 && (
+            <p className="text-[10px] text-warning mt-1.5">
+              {unassignedCount} unassigned milestone{unassignedCount > 1 ? "s" : ""}
+            </p>
+          )}
+        </div>
 
-      {/* Progress */}
-      <div className="mt-5 space-y-2">
-        <div className="flex items-baseline justify-between text-xs">
-          <span className="text-base-content/55 uppercase tracking-[0.12em] text-[10px] font-semibold">
-            Progress
-          </span>
-          <span className="font-mono tabular-nums text-base-content/70">
-            {completedMilestones}/{milestoneCount}
-          </span>
+        {/* Money + open */}
+        <div className="lg:col-span-3 flex items-center justify-between lg:justify-end gap-5">
+          <div className="text-left lg:text-right">
+            <div className="font-mono text-sm font-semibold tabular-nums">
+              {totalDisplay}
+              <span className="ml-1 text-base-content/45 font-normal">USDC</span>
+            </div>
+            <div className="font-mono text-[11px] text-base-content/55 tabular-nums">
+              {remainingDisplay} remaining
+            </div>
+          </div>
+          <ArrowRightIcon className="h-4 w-4 text-base-content/40 group-hover:text-primary group-hover:translate-x-0.5 transition" />
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-base-300">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        {unassignedCount > 0 && (
-          <p className="text-[11px] text-warning">
-            {unassignedCount} unassigned milestone{unassignedCount > 1 ? "s" : ""}
-          </p>
-        )}
-      </div>
-
-      {/* Money */}
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-lg bg-base-200/60 border border-base-300 px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-base-content/45 font-semibold">Total</p>
-          <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-            {totalDisplay} <span className="text-base-content/45 font-normal">USDC</span>
-          </p>
-        </div>
-        <div className="rounded-lg bg-base-200/60 border border-base-300 px-3 py-2.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-base-content/45 font-semibold">Remaining</p>
-          <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
-            {remainingDisplay} <span className="text-base-content/45 font-normal">USDC</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Open affordance */}
-      <div className="mt-5 flex items-center justify-end text-xs font-medium text-base-content/55 group-hover:text-primary transition-colors">
-        Open
-        <ArrowRightIcon className="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
       </div>
     </article>
   );

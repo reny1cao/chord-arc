@@ -25,10 +25,16 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// Higher staleTime keeps contract reads cached across route changes so
+// navigating between pages doesn't flash a skeleton + refetch — the cached
+// value renders instantly while a background revalidation runs.
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
     },
   },
 });

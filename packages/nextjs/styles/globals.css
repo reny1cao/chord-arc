@@ -329,6 +329,17 @@
   letter-spacing: -0.01em;
 }
 
+/* Empty-filter affordance: only show when the rendered list has no DOM
+   children (i.e. every <ProjectItem> returned null because of the active
+   role filter). Lets us avoid lifting the role lookup into the parent. */
+.projects-empty-filter {
+  display: none;
+}
+
+.projects-list:empty + .projects-empty-filter {
+  display: block;
+}
+
 @keyframes rise {
   from {
     opacity: 0;

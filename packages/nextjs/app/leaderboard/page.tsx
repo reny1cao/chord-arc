@@ -119,16 +119,28 @@ async function getLogsBatched<TEvent extends Parameters<PublicClient["getLogs"]>
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000".toLowerCase();
 
+// Module-scope cache so the indexer state survives route changes. Without
+// this, navigating away from /leaderboard and back re-scans every event
+// from the deploy block — visible to the user as a "loading…" flash and
+// wasteful on the RPC. The cache is per-page-load (not persisted) which
+// is the right scope: a fresh tab gets a fresh scan, but click-throughs
+// within the session reuse the index.
+const indexerCache: { state: IndexerState; timestamps: Map<string, number> } = {
+  state: EMPTY_INDEX,
+  timestamps: new Map(),
+};
+
 const Leaderboard: NextPage = () => {
   // wagmi exposes a viem public client wired to the current target network.
   const publicClient = usePublicClient({ chainId: arcTestnet.id });
   const { data: currentBlock } = useBlockNumber({ chainId: arcTestnet.id, watch: false });
 
-  const [indexState, setIndexState] = useState<IndexerState>(EMPTY_INDEX);
+  const [indexState, setIndexState] = useState<IndexerState>(indexerCache.state);
   const [agentMap, setAgentMap] = useState<Map<string, AgentRegistryEntry>>(new Map());
-  const [scanning, setScanning] = useState(true);
+  // If we already have a non-empty cache we are not "scanning from scratch."
+  const [scanning, setScanning] = useState(indexerCache.state.lastScannedBlock === EMPTY_INDEX.lastScannedBlock);
   const [error, setError] = useState<string | null>(null);
-  const [lastBlockTimestamps, setLastBlockTimestamps] = useState<Map<string, number>>(new Map());
+  const [lastBlockTimestamps, setLastBlockTimestamps] = useState<Map<string, number>>(indexerCache.timestamps);
   // `nowSecs` updates every 30 s so the "X minutes ago" labels stay fresh
   // without calling impure `Date.now()` during render.
   const [nowSecs, setNowSecs] = useState<number>(() => Math.floor(Date.now() / 1000));
@@ -140,8 +152,9 @@ const Leaderboard: NextPage = () => {
   // The scan cursor lives in a ref — NOT state — so that bumping it after a
   // successful scan does NOT cause `runScan`'s identity to change and
   // re-trigger the polling effect. Without this, the 30 s interval would
-  // collapse into a tight RPC loop on a chain with fast finality.
-  const scanCursorRef = useRef<bigint>(EMPTY_INDEX.lastScannedBlock);
+  // collapse into a tight RPC loop on a chain with fast finality. Seeded
+  // from the module cache so re-mounts pick up where we left off.
+  const scanCursorRef = useRef<bigint>(indexerCache.state.lastScannedBlock);
   const scanInFlight = useRef(false);
 
   // Load agents.json once on mount (fail-soft).
@@ -196,11 +209,15 @@ const Leaderboard: NextPage = () => {
       }
 
       scanCursorRef.current = head;
-      setIndexState(prev => ({
-        assignments: [...prev.assignments, ...newAssignments],
-        payments: [...prev.payments, ...newPayments],
-        lastScannedBlock: head,
-      }));
+      setIndexState(prev => {
+        const next = {
+          assignments: [...prev.assignments, ...newAssignments],
+          payments: [...prev.payments, ...newPayments],
+          lastScannedBlock: head,
+        };
+        indexerCache.state = next;
+        return next;
+      });
       setError(null);
     } catch (err) {
       console.error("[leaderboard] scan failed", err);
@@ -295,6 +312,7 @@ const Leaderboard: NextPage = () => {
         setLastBlockTimestamps(prev => {
           const merged = new Map(prev);
           for (const [k, v] of updates) merged.set(k, v);
+          indexerCache.timestamps = merged;
           return merged;
         });
       }
