@@ -35,7 +35,6 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { ARC_USDC_ADDRESS, arcTestnet } from "~~/scaffold.config";
-import { fetchAgentsRegistry } from "~~/utils/agentsRegistry";
 import { ERC20_ABI, USDC_DECIMALS } from "~~/utils/erc20";
 
 const ESCROW = deployedContracts[arcTestnet.id].ChordEscrow;
@@ -50,15 +49,7 @@ const REQUIRED_USDC_NUM = 2; // require ≥2 USDC so creation + gas + headroom.
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const POLL_INTERVAL_MS = 5_000;
 
-const STATUS_LABELS = [
-  "Open",
-  "Assigned",
-  "Accepted",
-  "In progress",
-  "Submitted",
-  "Approved",
-  "Paid",
-] as const;
+const STATUS_LABELS = ["Open", "Assigned", "Accepted", "In progress", "Submitted", "Approved", "Paid"] as const;
 
 interface BurnerState {
   pk: `0x${string}`;
@@ -90,8 +81,6 @@ const TryPage = () => {
   const [burner, setBurner] = useState<BurnerState | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<bigint>(0n);
   const [brief, setBrief] = useState<string>(DEFAULT_BRIEF);
-  const [defaultAssignee, setDefaultAssignee] = useState<AddressType | null>(null);
-  const [agentLabel, setAgentLabel] = useState<string | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CreatedProject | null>(null);
@@ -123,23 +112,6 @@ const TryPage = () => {
       transport: http(arcTestnet.rpcUrls.default.http[0]),
     });
   }, [burner]);
-
-  // Try to pre-pick a worker from agents.json (fail-soft → null, the
-  // milestone is then unassigned and waits for an external PM to route it).
-  useEffect(() => {
-    let cancelled = false;
-    fetchAgentsRegistry().then(reg => {
-      if (cancelled) return;
-      const first = reg.agents.find(a => a.online !== false);
-      if (first) {
-        setDefaultAssignee(first.address);
-        setAgentLabel(first.name);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Poll USDC balance for the burner — every 5 s while the page is open.
   useEffect(() => {
@@ -235,7 +207,9 @@ const TryPage = () => {
   const handleCreate = useCallback(async () => {
     if (!burner || !walletClientRef.current) return;
     if (usdcBalance < parseUnits(String(REQUIRED_USDC_NUM), USDC_DECIMALS)) {
-      setErrorMsg(`Need at least ${REQUIRED_USDC_NUM} USDC. Current balance: ${formatUnits(usdcBalance, USDC_DECIMALS)}.`);
+      setErrorMsg(
+        `Need at least ${REQUIRED_USDC_NUM} USDC. Current balance: ${formatUnits(usdcBalance, USDC_DECIMALS)}.`,
+      );
       return;
     }
     setCreating(true);
@@ -256,8 +230,10 @@ const TryPage = () => {
       });
       await publicClient.waitForTransactionReceipt({ hash: approveHash });
 
-      // 2) createProject — single milestone, optionally pre-assigned.
-      const initialAssignees: AddressType[] = defaultAssignee ? [defaultAssignee] : [];
+      // 2) createProject — single funded work contract. We intentionally do
+      // not auto-assign a worker from agents.json here: a demo registry entry
+      // is not the same thing as a verified, running daemon.
+      const initialAssignees: AddressType[] = [];
       const createHash = await walletClientRef.current.sendTransaction({
         account: privateKeyToAccount(burner.pk),
         chain: arcTestnet,
@@ -265,13 +241,7 @@ const TryPage = () => {
         data: encodeFunctionData({
           abi: ESCROW_ABI,
           functionName: "createProject",
-          args: [
-            ZERO_ADDRESS,
-            0n,
-            [brief],
-            [amount],
-            initialAssignees,
-          ],
+          args: [ZERO_ADDRESS, 0n, [brief], [amount], initialAssignees],
         }),
       });
       await publicClient.waitForTransactionReceipt({ hash: createHash });
@@ -298,7 +268,7 @@ const TryPage = () => {
     } finally {
       setCreating(false);
     }
-  }, [burner, usdcBalance, brief, defaultAssignee]);
+  }, [burner, usdcBalance, brief]);
 
   // -------- derived display values --------
   const balanceDisplay = useMemo(() => formatUnits(usdcBalance, USDC_DECIMALS), [usdcBalance]);
@@ -321,12 +291,10 @@ const TryPage = () => {
           <span aria-hidden className="inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
           Arc Testnet · USDC
         </span>
-        <h1 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight">
-          Spawn a test gig in 30 seconds.
-        </h1>
+        <h1 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight">Create a funded test contract.</h1>
         <p className="mt-4 text-base text-base-content/65 max-w-xl mx-auto leading-relaxed">
-          No wallet, no setup. We&apos;ll mint you a throwaway address, you grab a sip of testnet USDC from Circle&apos;s
-          faucet, and post a real milestone to{" "}
+          No wallet, no setup. We&apos;ll mint you a throwaway address, you grab a sip of testnet USDC from
+          Circle&apos;s faucet, and post a real milestone to{" "}
           <a
             href={`${explorerBase}/address/${ESCROW_ADDRESS}`}
             target="_blank"
@@ -335,7 +303,8 @@ const TryPage = () => {
           >
             ChordEscrow
           </a>
-          . An autonomous agent picks it up and you watch USDC settle on-chain.
+          . This creates a funded work contract first; routing to a verified agent or PM happens after the contract is
+          clear.
         </p>
       </div>
 
@@ -360,9 +329,7 @@ const TryPage = () => {
           <div className="rounded-2xl border border-base-300 bg-base-100 p-6 mb-5">
             <div className="flex items-start justify-between gap-2 mb-4">
               <div>
-                <div className="text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/45">
-                  Wallet
-                </div>
+                <div className="text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/45">Wallet</div>
                 <h2 className="mt-1 text-lg font-semibold tracking-tight">Your burner wallet</h2>
               </div>
               <button className="text-xs text-base-content/55 hover:text-base-content" onClick={handleReset}>
@@ -414,8 +381,8 @@ const TryPage = () => {
             <div className="text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/45">Step 02</div>
             <h2 className="mt-1 text-lg font-semibold tracking-tight">Top up from the Circle faucet</h2>
             <p className="mt-2 text-sm text-base-content/65 leading-relaxed">
-              Circle runs the official Arc Testnet USDC faucet. We&apos;ll pre-fill the address if the form supports
-              it — otherwise paste the address above.
+              Circle runs the official Arc Testnet USDC faucet. We&apos;ll pre-fill the address if the form supports it
+              — otherwise paste the address above.
             </p>
             <a
               href={faucetUrl}
@@ -443,7 +410,7 @@ const TryPage = () => {
             <div className="text-[11px] uppercase tracking-[0.16em] font-semibold text-base-content/45">Step 03</div>
             <h2 className="mt-1 text-lg font-semibold tracking-tight">Post a 1-USDC test milestone</h2>
             <p className="mt-2 text-sm text-base-content/65 leading-relaxed">
-              We&apos;ll fund a single 1-USDC milestone in the on-chain escrow. Two transactions:{" "}
+              We&apos;ll fund a single 1-USDC delegated work contract in the on-chain escrow. Two transactions:{" "}
               <code className="font-mono text-xs bg-base-200 border border-base-300 px-1 rounded">approve</code> then{" "}
               <code className="font-mono text-xs bg-base-200 border border-base-300 px-1 rounded">createProject</code>.
               Both pay gas in USDC on Arc.
@@ -463,17 +430,10 @@ const TryPage = () => {
               disabled={creating || !!created}
             />
 
-            {defaultAssignee ? (
-              <p className="text-xs text-base-content/65 mt-2">
-                Pre-assigned to: <span className="font-mono text-base-content">{agentLabel ?? defaultAssignee}</span>{" "}
-                <span className="text-base-content/40">(from agents.json)</span>
-              </p>
-            ) : (
-              <p className="text-xs text-base-content/65 mt-2">
-                No agents.json published yet — the milestone will land unassigned and wait for any worker daemon to
-                pick it up.
-              </p>
-            )}
+            <p className="text-xs text-base-content/65 mt-2">
+              This test contract is not auto-assigned. Assign it only to a verified worker or PM that is actually
+              running.
+            </p>
 
             <button
               className={`btn btn-primary mt-4 ${celebrate ? "animate-pulse" : ""}`}
@@ -608,8 +568,8 @@ const TryPage = () => {
       <div className="text-xs text-base-content/50 mt-10 text-center space-y-1">
         <p>
           Burner key: client-side only ·{" "}
-          <code className="font-mono bg-base-200 border border-base-300 px-1 rounded">sessionStorage</code> · dies
-          with the tab. Never reuse for anything that matters.
+          <code className="font-mono bg-base-200 border border-base-300 px-1 rounded">sessionStorage</code> · dies with
+          the tab. Never reuse for anything that matters.
         </p>
         <p>
           Want to wire your own agent? See{" "}

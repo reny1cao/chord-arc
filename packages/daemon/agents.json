@@ -1,6 +1,6 @@
 {
   "version": "0.1",
-  "updatedAt": "2026-05-22",
+  "updatedAt": "2026-05-24",
   "registry": "chord-arc reference",
   "agents": [
     {
@@ -13,7 +13,18 @@
       "agentRuntime": "claude-code",
       "online": true,
       "endpoint": "https://chord-claude-react.example.com",
-      "verifiedBy": null
+      "verifiedBy": null,
+      "workProducts": [
+        {
+          "name": "Production React surface",
+          "result": "Ships Next.js pages, component states, and Tailwind UI that can be reviewed in-browser.",
+          "proof": "Registry profile plus prior Chord frontend milestones",
+          "acceptance": "Route renders, responsive states hold, and typecheck passes on changed files.",
+          "authority": "claude-code runtime with frontend specialization",
+          "minPayoutUsdc": 2,
+          "tags": ["react", "nextjs", "tailwind", "ui"]
+        }
+      ]
     },
     {
       "address": "0xBbBbBBBBbBbBbBBBbBbbbBBBBBbbBBbbbBBbBbBb",
@@ -25,7 +36,18 @@
       "agentRuntime": "codex",
       "online": true,
       "endpoint": "https://chord-codex-solidity.example.com",
-      "verifiedBy": null
+      "verifiedBy": null,
+      "workProducts": [
+        {
+          "name": "Smart-contract audit note",
+          "result": "Reviews Solidity flows, identifies behavioral risk, and returns tests or patch guidance.",
+          "proof": "Registry profile plus ChordEscrow test and audit history",
+          "acceptance": "Findings include severity, file references, and reproducible test commands.",
+          "authority": "codex runtime with EVM test coverage",
+          "minPayoutUsdc": 10,
+          "tags": ["solidity", "audit", "hardhat", "security"]
+        }
+      ]
     },
     {
       "address": "0xcCcCccCCcccCCccCCCCCccCccCcCcCccccCcCccC",
@@ -37,7 +59,53 @@
       "agentRuntime": "gemini",
       "online": true,
       "endpoint": "https://chord-gemini-copy.example.com",
-      "verifiedBy": null
+      "verifiedBy": null,
+      "workProducts": [
+        {
+          "name": "Launch-ready technical copy",
+          "result": "Turns rough product notes into docs, README sections, and concise launch copy.",
+          "proof": "Registry profile plus multilingual documentation samples",
+          "acceptance": "Copy is structured, fact-preserving, and ready for direct review.",
+          "authority": "gemini runtime for writing and translation",
+          "minPayoutUsdc": 1,
+          "tags": ["docs", "copywriting", "readme", "translation"]
+        }
+      ]
+    },
+    {
+      "address": "0x1111111111111111111111111111111111111111",
+      "name": "prediction-market-pyagent",
+      "description": "Research-only external PyAgent that reads real prediction-market data through Psephos or public venue APIs, ranks markets by information value, and returns evidence packs.",
+      "tags": [
+        "prediction-markets",
+        "crypto",
+        "research",
+        "forecasting",
+        "rl",
+        "psephos",
+        "market-intelligence",
+        "evidence-pack"
+      ],
+      "minPayoutUsdc": 5,
+      "maxConcurrent": 2,
+      "agentRuntime": "other",
+      "online": true,
+      "endpoint": "http://127.0.0.1:8765/events",
+      "verifiedBy": null,
+      "serviceLevel": "research-only",
+      "capabilities": ["prediction-market-discovery", "crypto-market-research", "forecast-calibration", "evidence-pack"],
+      "dataSources": ["psephos", "polymarket-gamma"],
+      "workProducts": [
+        {
+          "name": "Prediction-market evidence pack",
+          "result": "Ranks markets by information value and returns venue links, price context, and calibration notes.",
+          "proof": "Uses Psephos and Polymarket Gamma data sources",
+          "acceptance": "Every recommendation includes source links, current odds, and uncertainty notes.",
+          "authority": "research-only PyAgent with declared data-source boundary",
+          "minPayoutUsdc": 5,
+          "tags": ["prediction-markets", "forecasting", "evidence-pack", "psephos"]
+        }
+      ]
     }
   ]
 }

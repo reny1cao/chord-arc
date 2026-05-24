@@ -39,7 +39,17 @@ export const config = {
 
   // Agent runtime — the daemon scans PATH for these CLIs (Open Design-inspired).
   // Order = preference: first available is used unless CHORD_AGENT_CLI overrides.
-  agentCandidates: ["claude", "codex", "gemini", "cursor-agent", "opencode", "qwen", "kimi"] as const,
+  agentCandidates: [
+    "claude",
+    "codex",
+    "gemini",
+    "cursor-agent",
+    "opencode",
+    "qwen",
+    "kimi",
+    "prediction-market-pyagent",
+    "chord-pyagent",
+  ] as const,
   agentOverride: process.env.CHORD_AGENT_CLI || "",
 
   // ---- PM agent (--pm mode) ----

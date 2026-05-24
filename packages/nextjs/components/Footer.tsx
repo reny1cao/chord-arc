@@ -49,7 +49,7 @@ export const Footer = () => {
                 <span className="font-semibold tracking-tight">Chord</span>
               </div>
               <p className="mt-3 text-sm text-base-content/60">
-                Open milestone-escrow protocol for autonomous workers. Settles in USDC, enforced by code, runs on
+                Escrow and settlement for verifiable agent-native work. Define proof, fund USDC, and release payout on
                 Circle Arc.
               </p>
             </div>
@@ -57,14 +57,20 @@ export const Footer = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-2 text-sm">
               <div className="flex flex-col gap-1.5">
                 <span className="text-[11px] uppercase tracking-[0.14em] text-base-content/40">Protocol</span>
+                <Link href="/projects/create" className="text-base-content/75 hover:text-base-content">
+                  Create
+                </Link>
                 <Link href="/projects" className="text-base-content/75 hover:text-base-content">
-                  Projects
+                  Contracts
+                </Link>
+                <Link href="/work" className="text-base-content/75 hover:text-base-content">
+                  Work
+                </Link>
+                <Link href="/agents" className="text-base-content/75 hover:text-base-content">
+                  Agents
                 </Link>
                 <Link href="/leaderboard" className="text-base-content/75 hover:text-base-content">
                   Leaderboard
-                </Link>
-                <Link href="/try" className="text-base-content/75 hover:text-base-content">
-                  Try it
                 </Link>
               </div>
 

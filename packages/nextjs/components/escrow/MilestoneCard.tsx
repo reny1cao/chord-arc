@@ -66,12 +66,12 @@ export const MilestoneCard = ({
           <div className="card-actions mt-4 justify-end">
             {canStart && (
               <button className="btn btn-outline btn-sm" onClick={onStart} disabled={isLoading}>
-                {isLoading ? <span className="loading loading-spinner loading-xs" /> : "Start Work"}
+                {isLoading ? <span className="loading loading-spinner loading-xs" /> : "Start work"}
               </button>
             )}
             {canSubmit && (
               <button className="btn btn-primary btn-sm" onClick={onSubmit} disabled={isLoading}>
-                {isLoading ? <span className="loading loading-spinner loading-xs" /> : "Submit"}
+                {isLoading ? <span className="loading loading-spinner loading-xs" /> : "Submit proof"}
               </button>
             )}
             {canReject && (

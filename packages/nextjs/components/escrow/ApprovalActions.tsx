@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { MilestoneStatus } from "./StatusBadge";
 import { useAccount } from "wagmi";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { notification } from "~~/utils/scaffold-eth";
-import { MilestoneStatus } from "./StatusBadge";
 import type { ProjectRole } from "~~/hooks/useProjectRole";
+import { notification } from "~~/utils/scaffold-eth";
 
 interface ApprovalActionsProps {
   projectId: number;
@@ -41,7 +41,8 @@ export const ApprovalActions = ({
   });
 
   const statusNum = Number(status);
-  const isAssignee = address && assignee && assignee !== ZERO_ADDRESS && assignee.toLowerCase() === address.toLowerCase();
+  const isAssignee =
+    address && assignee && assignee !== ZERO_ADDRESS && assignee.toLowerCase() === address.toLowerCase();
   const isUnassigned = !assignee || assignee === ZERO_ADDRESS;
   const canAssign = (role === "client" || role === "pm") && statusNum === MilestoneStatus.Created && isUnassigned;
   const canUnassign = (role === "client" || role === "pm") && statusNum === MilestoneStatus.Assigned;
@@ -187,7 +188,8 @@ export const ApprovalActions = ({
     }
   };
 
-  const hasAnyAction = canAssign || canUnassign || canAccept || canDecline || canStart || canSubmit || canApprove || canReject;
+  const hasAnyAction =
+    canAssign || canUnassign || canAccept || canDecline || canStart || canSubmit || canApprove || canReject;
 
   if (!hasAnyAction) {
     return null;
@@ -198,32 +200,20 @@ export const ApprovalActions = ({
       <div className="flex gap-2 flex-wrap">
         {/* Assignment actions */}
         {canAssign && (
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => setIsAssignModalOpen(true)}
-            disabled={isMining}
-          >
+          <button className="btn btn-outline btn-sm" onClick={() => setIsAssignModalOpen(true)} disabled={isMining}>
             Assign Worker
           </button>
         )}
 
         {canUnassign && (
-          <button
-            className="btn btn-outline btn-sm btn-warning"
-            onClick={handleUnassign}
-            disabled={isMining}
-          >
+          <button className="btn btn-outline btn-sm btn-warning" onClick={handleUnassign} disabled={isMining}>
             {isMining ? <span className="loading loading-spinner loading-xs" /> : "Unassign"}
           </button>
         )}
 
         {/* Acceptance actions */}
         {canAccept && (
-          <button
-            className="btn btn-success btn-sm"
-            onClick={handleAccept}
-            disabled={isMining}
-          >
+          <button className="btn btn-success btn-sm" onClick={handleAccept} disabled={isMining}>
             {isMining ? <span className="loading loading-spinner loading-xs" /> : "Accept"}
           </button>
         )}
@@ -240,22 +230,14 @@ export const ApprovalActions = ({
 
         {/* Work actions */}
         {canStart && (
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={handleStart}
-            disabled={isMining}
-          >
-            {isMining ? <span className="loading loading-spinner loading-xs" /> : "Start Work"}
+          <button className="btn btn-outline btn-sm" onClick={handleStart} disabled={isMining}>
+            {isMining ? <span className="loading loading-spinner loading-xs" /> : "Start work"}
           </button>
         )}
 
         {canSubmit && (
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => setIsSubmitModalOpen(true)}
-            disabled={isMining}
-          >
-            Submit Deliverable
+          <button className="btn btn-primary btn-sm" onClick={() => setIsSubmitModalOpen(true)} disabled={isMining}>
+            Submit proof
           </button>
         )}
 
@@ -271,11 +253,7 @@ export const ApprovalActions = ({
         )}
 
         {canApprove && (
-          <button
-            className="btn btn-success btn-sm"
-            onClick={handleApprove}
-            disabled={isMining}
-          >
+          <button className="btn btn-success btn-sm" onClick={handleApprove} disabled={isMining}>
             {isMining ? <span className="loading loading-spinner loading-xs" /> : "Approve & Pay"}
           </button>
         )}
@@ -285,9 +263,7 @@ export const ApprovalActions = ({
       <dialog className={`modal ${isAssignModalOpen ? "modal-open" : ""}`}>
         <div className="modal-box">
           <h3 className="font-bold text-lg">Assign Worker</h3>
-          <p className="py-4 text-sm opacity-70">
-            Enter the wallet address of the worker to assign to this milestone.
-          </p>
+          <p className="py-4 text-sm opacity-70">Enter the wallet address of the worker to assign to this milestone.</p>
           <div className="form-control">
             <input
               type="text"
@@ -301,11 +277,7 @@ export const ApprovalActions = ({
             <button className="btn btn-ghost" onClick={() => setIsAssignModalOpen(false)}>
               Cancel
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleAssign}
-              disabled={isMining || !assigneeAddress.trim()}
-            >
+            <button className="btn btn-primary" onClick={handleAssign} disabled={isMining || !assigneeAddress.trim()}>
               {isMining ? <span className="loading loading-spinner loading-xs" /> : "Assign"}
             </button>
           </div>
@@ -319,9 +291,7 @@ export const ApprovalActions = ({
       <dialog className={`modal ${isDeclineModalOpen ? "modal-open" : ""}`}>
         <div className="modal-box">
           <h3 className="font-bold text-lg">Decline Assignment</h3>
-          <p className="py-4 text-sm opacity-70">
-            Optionally provide a reason for declining this assignment.
-          </p>
+          <p className="py-4 text-sm opacity-70">Optionally provide a reason for declining this assignment.</p>
           <div className="form-control">
             <textarea
               className="textarea textarea-bordered h-24"
@@ -334,11 +304,7 @@ export const ApprovalActions = ({
             <button className="btn btn-ghost" onClick={() => setIsDeclineModalOpen(false)}>
               Cancel
             </button>
-            <button
-              className="btn btn-error"
-              onClick={handleDecline}
-              disabled={isMining}
-            >
+            <button className="btn btn-error" onClick={handleDecline} disabled={isMining}>
               {isMining ? <span className="loading loading-spinner loading-xs" /> : "Decline"}
             </button>
           </div>
@@ -351,14 +317,14 @@ export const ApprovalActions = ({
       {/* Submit Modal */}
       <dialog className={`modal ${isSubmitModalOpen ? "modal-open" : ""}`}>
         <div className="modal-box">
-          <h3 className="font-bold text-lg">Submit Milestone</h3>
+          <h3 className="font-bold text-lg">Submit proof</h3>
           <p className="py-4 text-sm opacity-70">
-            Describe your deliverables and any relevant details for the client to review.
+            Attach the proof package and any execution notes the client needs for review.
           </p>
           <div className="form-control">
             <textarea
               className="textarea textarea-bordered h-32"
-              placeholder="Describe what you've completed..."
+              placeholder="Source links, output summary, validation notes, files, or handoff URL..."
               value={submissionNote}
               onChange={e => setSubmissionNote(e.target.value)}
             />
@@ -367,11 +333,7 @@ export const ApprovalActions = ({
             <button className="btn btn-ghost" onClick={() => setIsSubmitModalOpen(false)}>
               Cancel
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSubmit}
-              disabled={isMining || !submissionNote.trim()}
-            >
+            <button className="btn btn-primary" onClick={handleSubmit} disabled={isMining || !submissionNote.trim()}>
               {isMining ? <span className="loading loading-spinner loading-xs" /> : "Submit"}
             </button>
           </div>
@@ -385,9 +347,7 @@ export const ApprovalActions = ({
       <dialog className={`modal ${isRejectModalOpen ? "modal-open" : ""}`}>
         <div className="modal-box">
           <h3 className="font-bold text-lg">Reject Submission</h3>
-          <p className="py-4 text-sm opacity-70">
-            Provide feedback to help the worker improve their submission.
-          </p>
+          <p className="py-4 text-sm opacity-70">Provide feedback to help the worker improve their submission.</p>
           <div className="form-control">
             <textarea
               className="textarea textarea-bordered h-32"
@@ -400,11 +360,7 @@ export const ApprovalActions = ({
             <button className="btn btn-ghost" onClick={() => setIsRejectModalOpen(false)}>
               Cancel
             </button>
-            <button
-              className="btn btn-error"
-              onClick={handleReject}
-              disabled={isMining || !rejectReason.trim()}
-            >
+            <button className="btn btn-error" onClick={handleReject} disabled={isMining || !rejectReason.trim()}>
               {isMining ? <span className="loading loading-spinner loading-xs" /> : "Reject"}
             </button>
           </div>

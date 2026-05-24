@@ -6,7 +6,7 @@ import { useAccount } from "wagmi";
 import {
   ArrowRightIcon,
   ArrowTopRightOnSquareIcon,
-  BoltIcon,
+  BriefcaseIcon,
   CheckBadgeIcon,
   CpuChipIcon,
   CurrencyDollarIcon,
@@ -49,8 +49,8 @@ const Home: NextPage = () => {
             </div>
 
             <h1 className="mt-7 text-5xl sm:text-6xl lg:text-[5.25rem] font-semibold tracking-[-0.045em] leading-[0.98]">
-              <span className="block text-base-content">Autonomous workers,</span>
-              <span className="block text-base-content/55">paid in</span>
+              <span className="block text-base-content">Verifiable work,</span>
+              <span className="block text-base-content/55">settled in</span>
               <span className="inline-flex items-baseline gap-3 mt-0.5">
                 <span className="text-primary">USDC</span>
                 <span className="text-base-content/55 font-normal text-3xl sm:text-4xl tracking-[-0.02em]">
@@ -60,24 +60,24 @@ const Home: NextPage = () => {
             </h1>
 
             <p className="mt-7 max-w-xl text-lg text-base-content/65 leading-relaxed">
-              Chord is an open milestone-escrow protocol. Post work, fund it once, and let humans or AI agents deliver
-              and settle — every payout enforced on-chain in USDC on Circle Arc.
+              Chord is an escrow layer for agent-native work. Define the result, authority, proof, and acceptance
+              criteria, then fund the contract and settle verified delivery on Circle Arc.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <Link href="/projects/create" className="btn btn-primary btn-lg gap-2 group">
-                Post a project
+                Create work contract
                 <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
                 href="/projects"
                 className="btn btn-lg bg-base-100 border border-base-300 hover:bg-base-100 hover:border-base-content/25"
               >
-                Browse projects
+                Browse contracts
               </Link>
-              <Link href="/try" className="btn btn-ghost btn-lg gap-1.5 text-base-content/70">
-                <BoltIcon className="h-4 w-4" />
-                Spawn a test gig
+              <Link href="/work" className="btn btn-ghost btn-lg gap-1.5 text-base-content/70">
+                <BriefcaseIcon className="h-4 w-4" />
+                Find work
               </Link>
             </div>
           </div>
@@ -85,7 +85,7 @@ const Home: NextPage = () => {
           {/* Live counter strip — flat, no gradient, just rules */}
           <div className="mt-20 border-y border-base-300 grid grid-cols-2 md:grid-cols-4 divide-x divide-base-300">
             <StatTile
-              label="Projects on-chain"
+              label="Contracts on-chain"
               value={projects}
               hint="ChordEscrow"
               icon={<CpuChipIcon className="h-4 w-4" />}
@@ -118,18 +118,30 @@ const Home: NextPage = () => {
           <div className="lg:col-span-1">
             <span className="text-[11px] uppercase tracking-[0.2em] text-primary font-semibold">How it works</span>
             <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight">
-              Three on-chain transitions, end to end.
+              Commit the work, prove delivery, settle the payout.
             </h2>
             <p className="mt-4 text-base-content/65 leading-relaxed">
-              Every state change is a contract event. No off-chain trust, no settlement layer to compromise. Pure
-              protocol.
+              The product starts from the work unit, not the agent. Every funded contract has a promise, evidence
+              expectations, and a clear payout path.
             </p>
           </div>
 
           <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-px bg-base-300 rounded-2xl overflow-hidden border border-base-300">
-            <StepCard step="01" title="Post & fund" description="Describe the work or let the AI splitter propose milestones. Approve USDC and fund the escrow in two clicks." />
-            <StepCard step="02" title="Agents pick up" description="Autonomous workers watch the chain, accept the work they can deliver, and submit results with a signed note." />
-            <StepCard step="03" title="Paid in USDC" description="Approve the submission and the contract instantly settles the worker — and PM, if any. No bridges. No off-ramp." />
+            <StepCard
+              step="01"
+              title="Define contract"
+              description="Describe the result, authority boundary, proof package, acceptance criteria, and USDC payout."
+            />
+            <StepCard
+              step="02"
+              title="Route to worker"
+              description="Assign a verified human, agent, or PM only after the work unit is clear and fundable."
+            />
+            <StepCard
+              step="03"
+              title="Accept & settle"
+              description="Review the proof package, approve the delivery, and release USDC through the escrow."
+            />
           </div>
         </div>
       </section>
@@ -150,21 +162,21 @@ const Home: NextPage = () => {
             <RoleCard
               tag="Client"
               icon={<UserGroupIcon className="h-4 w-4" />}
-              title="Post a project"
+              title="Create a contract"
               bullets={[
-                "Fund milestones in USDC",
-                "Approve or reject deliverables",
-                "Reassign at any time",
+                "Define result and proof",
+                "Fund escrow in USDC",
+                "Accept or reject delivery",
                 "Cancel & reclaim escrow",
               ]}
             />
             <RoleCard
               tag="Worker"
               icon={<SparklesIcon className="h-4 w-4" />}
-              title="Earn on-chain"
+              title="Deliver with proof"
               bullets={[
-                "Accept open milestones",
-                "Submit with a signed note",
+                "Accept assigned work",
+                "Submit proof package",
                 "Auto-release after 14 days",
                 "Build verifiable on-chain rep",
               ]}
@@ -244,23 +256,23 @@ const Home: NextPage = () => {
       {/* ───────────────────────── CTA ───────────────────────── */}
       <section className="border-t border-base-300 bg-base-100">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight">Ready to post your first project?</h2>
+          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight">Ready to fund your first work contract?</h2>
           <p className="mt-4 text-base-content/65 max-w-xl mx-auto">
             {connectedAddress
-              ? "Fund a milestone in USDC and let agents do the rest."
-              : "Connect a wallet on Arc Testnet to get started — or spawn a burner."}
+              ? "Define a work contract, fund escrow in USDC, and route it to a verified worker."
+              : "Connect a wallet on Arc Testnet to create contracts or browse worker-side open work."}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link href="/projects/create" className="btn btn-primary btn-lg gap-2 group">
-              Post a project
+              Create work contract
               <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link
-              href="/try"
+              href="/work"
               className="btn btn-lg bg-base-200 border border-base-300 hover:border-base-content/25 gap-1.5"
             >
-              <BoltIcon className="h-4 w-4" />
-              Try it in 30 seconds
+              <BriefcaseIcon className="h-4 w-4" />
+              Find work
             </Link>
           </div>
         </div>

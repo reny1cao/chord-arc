@@ -82,6 +82,8 @@ function argsForCli(cliName: string, briefPath: string, briefText: string): stri
     case "gemini":
     case "qwen":
     case "kimi":
+    case "prediction-market-pyagent":
+    case "chord-pyagent":
     case "opencode":
     case "cursor-agent":
       return ["-p", briefText];

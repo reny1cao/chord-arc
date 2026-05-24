@@ -1,12 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
 import { ProjectCard } from "~~/components/escrow/ProjectCard";
-import { useProjectRole } from "~~/hooks/useProjectRole";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
+import type { ProjectRole } from "~~/hooks/useProjectRole";
+import {
+  buildWorkItems,
+  isActiveWorkStatus,
+  isAwaitingReviewStatus,
+  isSettledStatus,
+  isUnassignedWork,
+} from "~~/utils/workContracts";
 
 interface ProjectData {
   client: string;
@@ -19,15 +26,6 @@ interface ProjectData {
   milestoneCount: bigint;
 }
 
-interface MilestonesData {
-  descriptions: string[];
-  amounts: bigint[];
-  assignees: string[];
-  statuses: number[];
-  submittedAts: bigint[];
-  submissionNotes: string[];
-}
-
 interface ProjectStats {
   totalMilestones: bigint;
   completedMilestones: bigint;
@@ -37,11 +35,34 @@ interface ProjectStats {
   acceptedMilestones: bigint;
 }
 
-type FilterRole = "all" | "client" | "assignee" | "pm";
+interface AddressRoleData {
+  isClient: boolean;
+  isPM: boolean;
+  assignedMilestones: bigint[];
+}
+
+interface MilestonesData {
+  descriptions: string[];
+  amounts: bigint[];
+  assignees: string[];
+  statuses: number[];
+  submittedAts: bigint[];
+  submissionNotes: string[];
+}
+
+type ContractFilter = "all" | "needs-routing" | "in-progress" | "awaiting-review" | "settled";
+
+const FILTERS: { id: ContractFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "needs-routing", label: "Needs routing" },
+  { id: "in-progress", label: "In progress" },
+  { id: "awaiting-review", label: "Awaiting review" },
+  { id: "settled", label: "Settled" },
+];
 
 const ProjectDashboard: NextPage = () => {
   const { address } = useAccount();
-  const [activeTab, setActiveTab] = useState<FilterRole>("all");
+  const [activeFilter, setActiveFilter] = useState<ContractFilter>("all");
 
   const { data: projectCount, isLoading: isLoadingCount } = useScaffoldReadContract({
     contractName: "ChordEscrow",
@@ -57,10 +78,10 @@ const ProjectDashboard: NextPage = () => {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
         <div>
-          <span className="text-[11px] uppercase tracking-[0.18em] font-semibold text-primary">Dashboard</span>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight">Projects</h1>
+          <span className="text-[11px] uppercase tracking-[0.18em] font-semibold text-primary">Client view</span>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight">Contracts</h1>
           <p className="text-sm text-base-content/65 mt-2 max-w-xl">
-            Open milestones for agents, and the projects you&apos;ve funded.
+            Manage the work contracts you funded or route as PM: assign workers, review proof, and release USDC.
           </p>
         </div>
         <Link href="/projects/create" className="btn btn-primary gap-2">
@@ -74,24 +95,16 @@ const ProjectDashboard: NextPage = () => {
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          New project
+          Create contract
         </Link>
       </div>
 
-      {/* Role tabs */}
       <div className="tabs tabs-boxed mb-8 inline-flex">
-        {(
-          [
-            { id: "all", label: "All" },
-            { id: "client", label: "As client" },
-            { id: "assignee", label: "As worker" },
-            { id: "pm", label: "As PM" },
-          ] as { id: FilterRole; label: string }[]
-        ).map(({ id, label }) => (
+        {FILTERS.map(({ id, label }) => (
           <button
             key={id}
-            className={`tab ${activeTab === id ? "tab-active" : ""}`}
-            onClick={() => setActiveTab(id)}
+            className={`tab ${activeFilter === id ? "tab-active" : ""}`}
+            onClick={() => setActiveFilter(id)}
           >
             {label}
           </button>
@@ -100,7 +113,9 @@ const ProjectDashboard: NextPage = () => {
 
       {isLoadingCount ? (
         <div className="space-y-3">
-          {[0, 1, 2].map(i => <ProjectRowSkeleton key={i} />)}
+          {[0, 1, 2].map(i => (
+            <ProjectRowSkeleton key={i} />
+          ))}
         </div>
       ) : !address ? (
         <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-8 flex items-start gap-4">
@@ -123,59 +138,30 @@ const ProjectDashboard: NextPage = () => {
           <div>
             <h3 className="font-semibold tracking-tight">Connect a wallet</h3>
             <p className="text-sm text-base-content/65 mt-1">
-              Connect on Arc Testnet to view the projects you&apos;ve funded, accepted, or are managing.
+              Connect on Arc Testnet to view the contracts you funded or manage as a PM.
             </p>
           </div>
         </div>
       ) : projectIds.length === 0 ? (
         <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-16 text-center">
           <div className="text-[11px] uppercase tracking-[0.18em] font-semibold text-base-content/45">Empty</div>
-          <h3 className="mt-3 text-xl font-semibold tracking-tight">No projects yet</h3>
+          <h3 className="mt-3 text-xl font-semibold tracking-tight">No contracts yet</h3>
           <p className="mt-2 text-sm text-base-content/65 max-w-sm mx-auto">
-            Create the first project on this contract and watch it settle in USDC.
+            Create the first verifiable work contract and fund escrow in USDC.
           </p>
           <Link href="/projects/create" className="btn btn-primary mt-6 gap-2">
-            Create project
+            Create contract
           </Link>
         </div>
       ) : (
-        <>
-          <div className="projects-list space-y-3">
-            {projectIds.map(id => (
-              <ProjectItem key={id} projectId={id} filterRole={activeTab} />
-            ))}
-          </div>
-          {activeTab !== "all" && (
-            <div className="projects-empty-filter mt-3 rounded-2xl border border-base-300 bg-base-100 px-6 py-12 text-center">
-              <div className="text-[11px] uppercase tracking-[0.18em] font-semibold text-base-content/45">
-                No matches
-              </div>
-              <h3 className="mt-3 text-xl font-semibold tracking-tight">
-                You&apos;re not the {filterLabel(activeTab)} on any project yet
-              </h3>
-              <p className="mt-2 text-sm text-base-content/65 max-w-md mx-auto">
-                Switch the filter back to <button onClick={() => setActiveTab("all")} className="link">All</button> to
-                see every project on this contract, or post a new project to take the role.
-              </p>
-            </div>
-          )}
-        </>
+        <div className="projects-list space-y-3">
+          {projectIds.map(id => (
+            <ProjectItem key={id} projectId={id} filter={activeFilter} viewerAddress={address} />
+          ))}
+        </div>
       )}
     </div>
   );
-};
-
-const filterLabel = (role: FilterRole) => {
-  switch (role) {
-    case "client":
-      return "client";
-    case "assignee":
-      return "worker";
-    case "pm":
-      return "PM";
-    default:
-      return "filter";
-  }
 };
 
 const ProjectRowSkeleton = () => (
@@ -207,17 +193,30 @@ const ProjectRowSkeleton = () => (
   </div>
 );
 
-// Separate component to fetch individual project data
 const ProjectItem = ({
   projectId,
-  filterRole,
+  filter,
+  viewerAddress,
 }: {
   projectId: number;
-  filterRole: FilterRole;
+  filter: ContractFilter;
+  viewerAddress: string;
 }) => {
   const { data: projectData, isLoading: isLoadingProject } = useScaffoldReadContract({
     contractName: "ChordEscrow",
     functionName: "getProject",
+    args: [BigInt(projectId)],
+  });
+
+  const { data: addressRoleData, isLoading: isLoadingRole } = useScaffoldReadContract({
+    contractName: "ChordEscrow",
+    functionName: "getAddressRole",
+    args: [BigInt(projectId), viewerAddress],
+  });
+
+  const { data: projectStats, isLoading: isLoadingStats } = useScaffoldReadContract({
+    contractName: "ChordEscrow",
+    functionName: "getProjectStats",
     args: [BigInt(projectId)],
   });
 
@@ -227,14 +226,7 @@ const ProjectItem = ({
     args: [BigInt(projectId)],
   });
 
-  const { data: projectStats, isLoading: isLoadingStats } = useScaffoldReadContract({
-    contractName: "ChordEscrow",
-    functionName: "getProjectStats",
-    args: [BigInt(projectId)],
-  });
-
-  // ChordEscrow.getProject returns: (client, pm, pmFeeBps, totalAmount, totalPaid, totalPmFees, active, milestoneCount)
-  const project = useMemo(() => {
+  const project = useMemo((): ProjectData | undefined => {
     if (!projectData) return undefined;
     if (Array.isArray(projectData)) {
       return {
@@ -251,24 +243,19 @@ const ProjectItem = ({
     return projectData as unknown as ProjectData;
   }, [projectData]);
 
-  // getAllMilestones returns: (descriptions, amounts, assignees, statuses, submittedAts, submissionNotes)
-  const milestones = useMemo(() => {
-    if (!milestonesData) return undefined;
-    if (Array.isArray(milestonesData)) {
+  const addressRole = useMemo((): AddressRoleData | undefined => {
+    if (!addressRoleData) return undefined;
+    if (Array.isArray(addressRoleData)) {
       return {
-        descriptions: milestonesData[0] as string[],
-        amounts: milestonesData[1] as bigint[],
-        assignees: milestonesData[2] as string[],
-        statuses: milestonesData[3] as number[],
-        submittedAts: milestonesData[4] as bigint[],
-        submissionNotes: milestonesData[5] as string[],
+        isClient: addressRoleData[0] as boolean,
+        isPM: addressRoleData[1] as boolean,
+        assignedMilestones: addressRoleData[2] as bigint[],
       };
     }
-    return milestonesData as unknown as MilestonesData;
-  }, [milestonesData]);
+    return addressRoleData as unknown as AddressRoleData;
+  }, [addressRoleData]);
 
-  // getProjectStats returns: (totalMilestones, completedMilestones, paidMilestones, remainingAmount, assignedMilestones, acceptedMilestones)
-  const stats = useMemo(() => {
+  const stats = useMemo((): ProjectStats | undefined => {
     if (!projectStats) return undefined;
     if (Array.isArray(projectStats)) {
       return {
@@ -283,34 +270,55 @@ const ProjectItem = ({
     return projectStats as unknown as ProjectStats;
   }, [projectStats]);
 
-  // Check if data is fully loaded and valid
-  const isDataValid = project?.client && stats && milestones;
+  const milestones = useMemo((): MilestonesData | undefined => {
+    if (!milestonesData) return undefined;
+    if (Array.isArray(milestonesData)) {
+      return {
+        descriptions: milestonesData[0] as string[],
+        amounts: milestonesData[1] as bigint[],
+        assignees: milestonesData[2] as string[],
+        statuses: milestonesData[3] as number[],
+        submittedAts: milestonesData[4] as bigint[],
+        submissionNotes: milestonesData[5] as string[],
+      };
+    }
+    return milestonesData as unknown as MilestonesData;
+  }, [milestonesData]);
 
-  const role = useProjectRole(
-    isDataValid
-      ? {
-          client: project.client,
-          pm: project.pm,
-          assignees: milestones.assignees,
-        }
-      : undefined
-  );
-
-  // Skeleton matching the new row layout — keeps a stable height + no flash
-  // while the per-project contract reads hydrate.
-  if (isLoadingProject || isLoadingStats || isLoadingMilestones) {
+  if (isLoadingProject || isLoadingStats || isLoadingRole || isLoadingMilestones) {
     return <ProjectRowSkeleton />;
   }
 
-  // If data not valid, skip
-  if (!isDataValid) {
+  if (!project?.client || !stats || !addressRole || !milestones) {
     return null;
   }
 
-  // Filter based on selected tab (skip filter for "all")
-  if (filterRole !== "all" && role !== filterRole) {
-    return null;
-  }
+  const role: ProjectRole = addressRole.isClient ? "client" : addressRole.isPM ? "pm" : "none";
+  if (role === "none") return null;
+
+  const workItems = buildWorkItems({
+    projectId,
+    client: project.client,
+    pm: project.pm,
+    descriptions: milestones.descriptions,
+    amounts: milestones.amounts,
+    assignees: milestones.assignees,
+    statuses: milestones.statuses,
+    submissionNotes: milestones.submissionNotes,
+  });
+
+  const matchesFilter =
+    filter === "all" ||
+    (filter === "needs-routing" && project.active && workItems.some(isUnassignedWork)) ||
+    (filter === "in-progress" && project.active && workItems.some(item => isActiveWorkStatus(item.status))) ||
+    (filter === "awaiting-review" && project.active && workItems.some(item => isAwaitingReviewStatus(item.status))) ||
+    (filter === "settled" && workItems.length > 0 && workItems.every(item => isSettledStatus(item.status)));
+
+  if (!matchesFilter) return null;
+
+  const routedMilestoneCount = workItems.filter(
+    item => !isUnassignedWork(item) && !isSettledStatus(item.status),
+  ).length;
 
   return (
     <ProjectCard
@@ -321,7 +329,7 @@ const ProjectItem = ({
       totalPaid={project.totalPaid}
       milestoneCount={Number(stats.totalMilestones)}
       completedMilestones={Number(stats.completedMilestones)}
-      assignedMilestones={Number(stats.assignedMilestones)}
+      assignedMilestones={routedMilestoneCount}
       active={project.active}
       role={role}
     />

@@ -1,7 +1,7 @@
 /**
  * Minimal ERC-20 ABI for direct wagmi reads/writes against tokens that
- * aren't part of the SE-2 deployedContracts registry — namely USDC on
- * Arc Testnet (`ARC_USDC_ADDRESS` in scaffold.config.ts).
+ * aren't part of the primary SE-2 deployedContracts registry — namely Arc
+ * USDC and the local MockUSDC used by deterministic Hardhat E2E runs.
  *
  * Use with `useReadContract` / `useWriteContract` from wagmi.
  */
@@ -67,5 +67,5 @@ export const ERC20_ABI = [
   },
 ] as const;
 
-/** USDC on Arc Testnet uses 6 decimals (not 18 — the gas-accounting view uses 18). */
+/** Chord uses 6-decimal USDC on Arc and in local MockUSDC deployments. */
 export const USDC_DECIMALS = 6;

@@ -1,0 +1,76 @@
+name: Deploy HCloud Singapore
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: hcloud-singapore
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to hcloud Singapore
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    environment: hcloud-singapore
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          HCLOUD_SSH_KEY: ${{ secrets.HCLOUD_SSH_KEY }}
+          HCLOUD_SSH_HOST: ${{ secrets.HCLOUD_SSH_HOST }}
+          HCLOUD_SSH_PORT: ${{ secrets.HCLOUD_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$HCLOUD_SSH_KEY" > ~/.ssh/chord_hcloud
+          chmod 600 ~/.ssh/chord_hcloud
+          ssh-keyscan -p "$HCLOUD_SSH_PORT" "$HCLOUD_SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        shell: bash
+        env:
+          HCLOUD_SSH_HOST: ${{ secrets.HCLOUD_SSH_HOST }}
+          HCLOUD_SSH_PORT: ${{ secrets.HCLOUD_SSH_PORT || '22' }}
+          HCLOUD_SSH_USER: ${{ secrets.HCLOUD_SSH_USER || 'dev' }}
+          HCLOUD_APP_DIR: ${{ secrets.HCLOUD_APP_DIR || '/home/dev/chord-arc' }}
+          CHORD_NEXT_PORT: ${{ secrets.CHORD_NEXT_PORT || '3010' }}
+          CHORD_APP_URL: ${{ secrets.CHORD_APP_URL || '' }}
+          NEXT_PUBLIC_ARC_TESTNET_RPC_URL: ${{ secrets.NEXT_PUBLIC_ARC_TESTNET_RPC_URL || '' }}
+          NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '' }}
+          NEXT_PUBLIC_CHORD_AGENTS_REGISTRY_URL: ${{ secrets.NEXT_PUBLIC_CHORD_AGENTS_REGISTRY_URL || '' }}
+          KIMI_API_KEY: ${{ secrets.KIMI_API_KEY || '' }}
+        run: |
+          set -euo pipefail
+          remote="$HCLOUD_SSH_USER@$HCLOUD_SSH_HOST"
+          app_url="${CHORD_APP_URL:-http://127.0.0.1:$CHORD_NEXT_PORT}"
+          ssh -i ~/.ssh/chord_hcloud -p "$HCLOUD_SSH_PORT" "$remote" \
+            "CHORD_APP_DIR='$HCLOUD_APP_DIR' \
+             GIT_SHA='${GITHUB_SHA}' \
+             CHORD_NEXT_PORT='$CHORD_NEXT_PORT' \
+             CHORD_APP_URL='$app_url' \
+             NEXT_PUBLIC_CHORD_NETWORK='arc' \
+             NEXT_PUBLIC_ARC_TESTNET_RPC_URL='$NEXT_PUBLIC_ARC_TESTNET_RPC_URL' \
+             NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID='$NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID' \
+             NEXT_PUBLIC_CHORD_AGENTS_REGISTRY_URL='$NEXT_PUBLIC_CHORD_AGENTS_REGISTRY_URL' \
+             KIMI_API_KEY='$KIMI_API_KEY' \
+             bash -lc 'if [ ! -d \"\$CHORD_APP_DIR/.git\" ]; then git clone https://github.com/reny1cao/chord-arc.git \"\$CHORD_APP_DIR\"; fi; cd \"\$CHORD_APP_DIR\" && git fetch origin main && git checkout --detach \"\$GIT_SHA\" && bash deploy/hcloud/deploy.sh'"
+
+      - name: Smoke public endpoint
+        shell: bash
+        env:
+          CHORD_APP_URL: ${{ secrets.CHORD_APP_URL || '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CHORD_APP_URL" ]; then
+            echo "CHORD_APP_URL not configured; remote deploy script already ran localhost smoke."
+            exit 0
+          fi
+          curl -fsS --retry 12 --retry-delay 2 --retry-connrefused "$CHORD_APP_URL/projects" | grep -Fq "Contracts"

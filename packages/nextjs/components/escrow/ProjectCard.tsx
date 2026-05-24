@@ -61,7 +61,7 @@ export const ProjectCard = ({
             <span className="font-mono text-xs text-base-content/45 tabular-nums">
               #{projectId.toString().padStart(3, "0")}
             </span>
-            <h3 className="font-semibold tracking-tight">Project</h3>
+            <h3 className="font-semibold tracking-tight">Contract</h3>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <span
@@ -80,9 +80,7 @@ export const ProjectCard = ({
         {/* Parties */}
         <div className="lg:col-span-3 min-w-0 space-y-2" onClick={e => e.stopPropagation()}>
           <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45 mb-1">
-              Client
-            </p>
+            <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45 mb-1">Client</p>
             <div className="address-mono">
               <Address address={client} size="xs" />
             </div>
@@ -102,22 +100,17 @@ export const ProjectCard = ({
         {/* Progress */}
         <div className="lg:col-span-3">
           <div className="flex items-baseline justify-between text-xs mb-1.5">
-            <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">
-              Progress
-            </span>
+            <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">Progress</span>
             <span className="font-mono text-base-content/75 tabular-nums">
               {completedMilestones}/{milestoneCount}
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-base-300">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${progressPercent}%` }}
-            />
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progressPercent}%` }} />
           </div>
           {unassignedCount > 0 && (
             <p className="text-[10px] text-warning mt-1.5">
-              {unassignedCount} unassigned milestone{unassignedCount > 1 ? "s" : ""}
+              {unassignedCount} work unit{unassignedCount > 1 ? "s" : ""} needs routing
             </p>
           )}
         </div>
@@ -129,9 +122,7 @@ export const ProjectCard = ({
               {totalDisplay}
               <span className="ml-1 text-base-content/45 font-normal">USDC</span>
             </div>
-            <div className="font-mono text-[11px] text-base-content/55 tabular-nums">
-              {remainingDisplay} remaining
-            </div>
+            <div className="font-mono text-[11px] text-base-content/55 tabular-nums">{remainingDisplay} remaining</div>
           </div>
           <ArrowRightIcon className="h-4 w-4 text-base-content/40 group-hover:text-primary group-hover:translate-x-0.5 transition" />
         </div>

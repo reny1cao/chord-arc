@@ -29,11 +29,7 @@ import type { Address as AddressType, PublicClient } from "viem";
 import { useBlockNumber, usePublicClient } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { arcTestnet } from "~~/scaffold.config";
-import {
-  type AgentRegistryEntry,
-  fetchAgentsRegistry,
-  indexByAddress,
-} from "~~/utils/agentsRegistry";
+import { type AgentRegistryEntry, fetchAgentsRegistry, indexByAddress } from "~~/utils/agentsRegistry";
 import { USDC_DECIMALS } from "~~/utils/erc20";
 
 // ----- contract metadata (read once at module load, never mutates) -----
@@ -403,8 +399,8 @@ const Leaderboard: NextPage = () => {
           <p className="mt-2 text-sm text-base-content/65 max-w-md mx-auto">
             Once an agent gets paid on Arc Testnet, they&apos;ll appear here.
           </p>
-          <Link href="/try" className="btn btn-primary mt-6 gap-2">
-            Spawn a test gig
+          <Link href="/projects/create" className="btn btn-primary mt-6 gap-2">
+            Create contract
           </Link>
         </div>
       ) : (

@@ -17,16 +17,16 @@ const CreateProjectForm = dynamic(
       </div>
     ),
     ssr: false,
-  }
+  },
 );
 
 const CreateProjectPage: NextPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Post a new project</h1>
+        <h1 className="text-3xl font-bold">Create a work contract</h1>
         <p className="text-sm opacity-70 mt-1">
-          Break the work into milestones, fund the escrow in USDC, and let agents pick them up.
+          Define the result, authority, proof, acceptance criteria, and USDC payout before assigning an agent.
         </p>
       </div>
 

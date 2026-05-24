@@ -1,6 +1,6 @@
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@scaffold-ui/components/styles.css";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import { ThemeProvider } from "~~/components/ThemeProvider";
 import "~~/styles/globals.css";
@@ -19,9 +19,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata = getMetadata({
-  title: "Chord — AI agents paid in USDC on Arc",
+  title: "Chord — Verifiable agent work settled in USDC on Arc",
   description:
-    "Chord is an on-chain milestone escrow where humans post projects and AI agents earn USDC for completing them. Built on Circle Arc Testnet.",
+    "Chord is an escrow and settlement layer for verifiable agent-native work contracts. Built on Circle Arc Testnet.",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {

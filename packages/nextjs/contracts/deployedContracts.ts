@@ -5,6 +5,1422 @@
 import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 
 const deployedContracts = {
+  31337: {
+    ChordEscrow: {
+      address: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      abi: [
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "usdcToken",
+              type: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "constructor",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "target",
+              type: "address",
+            },
+          ],
+          name: "AddressEmptyCode",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "account",
+              type: "address",
+            },
+          ],
+          name: "AddressInsufficientBalance",
+          type: "error",
+        },
+        {
+          inputs: [],
+          name: "FailedInnerCall",
+          type: "error",
+        },
+        {
+          inputs: [],
+          name: "ReentrancyGuardReentrantCall",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "token",
+              type: "address",
+            },
+          ],
+          name: "SafeERC20FailedOperation",
+          type: "error",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "assignee",
+              type: "address",
+            },
+          ],
+          name: "MilestoneAccepted",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "assigneeAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "pmFee",
+              type: "uint256",
+            },
+          ],
+          name: "MilestoneApproved",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "assignee",
+              type: "address",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "assignedBy",
+              type: "address",
+            },
+          ],
+          name: "MilestoneAssigned",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "assignee",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "string",
+              name: "reason",
+              type: "string",
+            },
+          ],
+          name: "MilestoneDeclined",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "amount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "bool",
+              name: "autoReleased",
+              type: "bool",
+            },
+          ],
+          name: "MilestonePaid",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "string",
+              name: "reason",
+              type: "string",
+            },
+          ],
+          name: "MilestoneRejected",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "MilestoneStarted",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "string",
+              name: "note",
+              type: "string",
+            },
+          ],
+          name: "MilestoneSubmitted",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "previousAssignee",
+              type: "address",
+            },
+          ],
+          name: "MilestoneUnassigned",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "refundAmount",
+              type: "uint256",
+            },
+          ],
+          name: "ProjectCancelled",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "client",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "address",
+              name: "pm",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "pmFeeBps",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "totalAmount",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "milestoneCount",
+              type: "uint256",
+            },
+          ],
+          name: "ProjectCreated",
+          type: "event",
+        },
+        {
+          inputs: [],
+          name: "ASSIGNMENT_TIMEOUT",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "BPS_DENOMINATOR",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "MAX_PM_FEE_BPS",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "MIN_MILESTONE_AMOUNT",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "TIMEOUT_PERIOD",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "acceptMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "approveMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              internalType: "address",
+              name: "assignee",
+              type: "address",
+            },
+          ],
+          name: "assignMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+          ],
+          name: "cancelProject",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "pm",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "pmFeeBps",
+              type: "uint256",
+            },
+            {
+              internalType: "string[]",
+              name: "descriptions",
+              type: "string[]",
+            },
+            {
+              internalType: "uint256[]",
+              name: "amounts",
+              type: "uint256[]",
+            },
+            {
+              internalType: "address[]",
+              name: "initialAssignees",
+              type: "address[]",
+            },
+          ],
+          name: "createProject",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              internalType: "string",
+              name: "reason",
+              type: "string",
+            },
+          ],
+          name: "declineMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "emergencyReclaim",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "expireAssignment",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "address",
+              name: "addr",
+              type: "address",
+            },
+          ],
+          name: "getAddressRole",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "isClient",
+              type: "bool",
+            },
+            {
+              internalType: "bool",
+              name: "isPM",
+              type: "bool",
+            },
+            {
+              internalType: "uint256[]",
+              name: "assignedMilestones",
+              type: "uint256[]",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+          ],
+          name: "getAllMilestones",
+          outputs: [
+            {
+              internalType: "string[]",
+              name: "descriptions",
+              type: "string[]",
+            },
+            {
+              internalType: "uint256[]",
+              name: "amounts",
+              type: "uint256[]",
+            },
+            {
+              internalType: "address[]",
+              name: "assignees",
+              type: "address[]",
+            },
+            {
+              internalType: "enum ChordEscrow.MilestoneStatus[]",
+              name: "statuses",
+              type: "uint8[]",
+            },
+            {
+              internalType: "uint256[]",
+              name: "submittedAts",
+              type: "uint256[]",
+            },
+            {
+              internalType: "string[]",
+              name: "submissionNotes",
+              type: "string[]",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "getMilestone",
+          outputs: [
+            {
+              internalType: "string",
+              name: "description",
+              type: "string",
+            },
+            {
+              internalType: "uint256",
+              name: "amount",
+              type: "uint256",
+            },
+            {
+              internalType: "address",
+              name: "assignee",
+              type: "address",
+            },
+            {
+              internalType: "enum ChordEscrow.MilestoneStatus",
+              name: "status",
+              type: "uint8",
+            },
+            {
+              internalType: "uint256",
+              name: "createdAt",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "submittedAt",
+              type: "uint256",
+            },
+            {
+              internalType: "string",
+              name: "submissionNote",
+              type: "string",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "getMilestoneTimestamps",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "createdAt",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "assignedAt",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "acceptedAt",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "submittedAt",
+              type: "uint256",
+            },
+            {
+              internalType: "bool",
+              name: "canAutoRelease",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+          ],
+          name: "getProject",
+          outputs: [
+            {
+              internalType: "address",
+              name: "client",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "pm",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "pmFeeBps",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "totalAmount",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "totalPaid",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "totalPmFees",
+              type: "uint256",
+            },
+            {
+              internalType: "bool",
+              name: "active",
+              type: "bool",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneCount",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+          ],
+          name: "getProjectStats",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "totalMilestones",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "completedMilestones",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "paidMilestones",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "remainingAmount",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "assignedMilestones",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "acceptedMilestones",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "projectCount",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          name: "projects",
+          outputs: [
+            {
+              internalType: "address",
+              name: "client",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "pm",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "pmFeeBps",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "totalAmount",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "totalPaid",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "totalPmFees",
+              type: "uint256",
+            },
+            {
+              internalType: "bool",
+              name: "active",
+              type: "bool",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              internalType: "string",
+              name: "reason",
+              type: "string",
+            },
+          ],
+          name: "rejectMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "releaseMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "startMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+            {
+              internalType: "string",
+              name: "note",
+              type: "string",
+            },
+          ],
+          name: "submitMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "uint256",
+              name: "projectId",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "milestoneIndex",
+              type: "uint256",
+            },
+          ],
+          name: "unassignMilestone",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "usdc",
+          outputs: [
+            {
+              internalType: "contract IERC20",
+              name: "",
+              type: "address",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 3,
+    },
+    MockUSDC: {
+      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      abi: [
+        {
+          inputs: [
+            {
+              internalType: "string",
+              name: "name_",
+              type: "string",
+            },
+            {
+              internalType: "string",
+              name: "symbol_",
+              type: "string",
+            },
+            {
+              internalType: "uint8",
+              name: "dec",
+              type: "uint8",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "constructor",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "spender",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "allowance",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "needed",
+              type: "uint256",
+            },
+          ],
+          name: "ERC20InsufficientAllowance",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "sender",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "balance",
+              type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "needed",
+              type: "uint256",
+            },
+          ],
+          name: "ERC20InsufficientBalance",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "approver",
+              type: "address",
+            },
+          ],
+          name: "ERC20InvalidApprover",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "receiver",
+              type: "address",
+            },
+          ],
+          name: "ERC20InvalidReceiver",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "sender",
+              type: "address",
+            },
+          ],
+          name: "ERC20InvalidSender",
+          type: "error",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "spender",
+              type: "address",
+            },
+          ],
+          name: "ERC20InvalidSpender",
+          type: "error",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "owner",
+              type: "address",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "spender",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "value",
+              type: "uint256",
+            },
+          ],
+          name: "Approval",
+          type: "event",
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: true,
+              internalType: "address",
+              name: "from",
+              type: "address",
+            },
+            {
+              indexed: true,
+              internalType: "address",
+              name: "to",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "value",
+              type: "uint256",
+            },
+          ],
+          name: "Transfer",
+          type: "event",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "owner",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "spender",
+              type: "address",
+            },
+          ],
+          name: "allowance",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "spender",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "value",
+              type: "uint256",
+            },
+          ],
+          name: "approve",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "account",
+              type: "address",
+            },
+          ],
+          name: "balanceOf",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "decimals",
+          outputs: [
+            {
+              internalType: "uint8",
+              name: "",
+              type: "uint8",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "to",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "amount",
+              type: "uint256",
+            },
+          ],
+          name: "mint",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "name",
+          outputs: [
+            {
+              internalType: "string",
+              name: "",
+              type: "string",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "symbol",
+          outputs: [
+            {
+              internalType: "string",
+              name: "",
+              type: "string",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "totalSupply",
+          outputs: [
+            {
+              internalType: "uint256",
+              name: "",
+              type: "uint256",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "to",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "value",
+              type: "uint256",
+            },
+          ],
+          name: "transfer",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "from",
+              type: "address",
+            },
+            {
+              internalType: "address",
+              name: "to",
+              type: "address",
+            },
+            {
+              internalType: "uint256",
+              name: "value",
+              type: "uint256",
+            },
+          ],
+          name: "transferFrom",
+          outputs: [
+            {
+              internalType: "bool",
+              name: "",
+              type: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+      ],
+      inheritedFunctions: {
+        allowance: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        approve: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        balanceOf: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        decimals: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        name: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        symbol: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        totalSupply: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        transfer: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+        transferFrom: "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+      },
+      deployedOnBlock: 1,
+    },
+  },
   5042002: {
     ChordEscrow: {
       address: "0xa07e0229acAd5B3a1643a88474Dec913F9904a14",

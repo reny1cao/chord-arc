@@ -115,14 +115,16 @@ yarn install
 yarn chain
 
 # 3. Deploy locally (terminal 2) — auto-deploys MockUSDC if no real USDC for the network
-yarn deploy
+yarn local:deploy
 
 # 4. Frontend (terminal 3)
-yarn start                              # http://localhost:3000
+yarn local:start                        # http://localhost:3000
 
 # 5. Worker daemon (terminal 4)
 yarn daemon                             # scans PATH, reports config; full chain ops in D1
 ```
+
+For the deterministic local browser loop, including MockUSDC minting, see [`docs/LOCAL_E2E.md`](docs/LOCAL_E2E.md).
 
 ### Deploying to Arc Testnet
 

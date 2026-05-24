@@ -156,12 +156,14 @@ const ProjectDetailPage: NextPage = () => {
       : undefined,
   );
 
+  const assignees = milestones?.assignees;
+
   // Get unique assignees (workers) from milestones
   const uniqueAssignees = useMemo(() => {
-    if (!milestones?.assignees) return [];
-    const unique = [...new Set(milestones.assignees)].filter(addr => addr && addr !== ZERO_ADDRESS);
+    if (!assignees) return [];
+    const unique = [...new Set(assignees)].filter(addr => addr && addr !== ZERO_ADDRESS);
     return unique;
-  }, [milestones?.assignees]);
+  }, [assignees]);
 
   const handleRefresh = () => {
     refetchProject();
@@ -224,9 +226,7 @@ const ProjectDetailPage: NextPage = () => {
             Back to projects
           </button>
           <div className="mt-3 flex items-baseline gap-3">
-            <span className="font-mono text-sm text-base-content/45">
-              #{projectId.toString().padStart(3, "0")}
-            </span>
+            <span className="font-mono text-sm text-base-content/45">#{projectId.toString().padStart(3, "0")}</span>
             <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">Project</h1>
           </div>
         </div>
@@ -286,105 +286,104 @@ const ProjectDetailPage: NextPage = () => {
           <div className="rounded-2xl border border-base-300 bg-base-100 p-6">
             <h2 className="text-base font-semibold tracking-tight">Milestones</h2>
             <div className="mt-5 space-y-3">
-                {milestones.descriptions.map((description, index) => {
-                  const status = Number(milestones.statuses[index]);
-                  const amount = milestones.amounts[index];
-                  const assignee = milestones.assignees[index];
-                  const submissionNote = milestones.submissionNotes[index];
-                  const isUnassigned = !assignee || assignee === ZERO_ADDRESS;
+              {milestones.descriptions.map((description, index) => {
+                const status = Number(milestones.statuses[index]);
+                const amount = milestones.amounts[index];
+                const assignee = milestones.assignees[index];
+                const submissionNote = milestones.submissionNotes[index];
+                const isUnassigned = !assignee || assignee === ZERO_ADDRESS;
 
-                  const isPaid = status === MilestoneStatus.Paid;
-                  return (
-                    <div
-                      key={index}
-                      className="relative rounded-xl border border-base-300 bg-base-100 p-5 overflow-hidden"
-                    >
-                      {isPaid && (
-                        <span aria-hidden className="absolute inset-y-0 left-0 w-[2px] bg-success/60" />
-                      )}
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3 min-w-0">
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-base-200 border border-base-300 text-xs font-mono font-semibold text-base-content/55">
-                            {isPaid ? (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2.5}
-                                stroke="currentColor"
-                                className="h-3.5 w-3.5 text-success"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                              </svg>
-                            ) : (
-                              <span>{index + 1}</span>
+                const isPaid = status === MilestoneStatus.Paid;
+                return (
+                  <div
+                    key={index}
+                    className="relative rounded-xl border border-base-300 bg-base-100 p-5 overflow-hidden"
+                  >
+                    {isPaid && <span aria-hidden className="absolute inset-y-0 left-0 w-[2px] bg-success/60" />}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-base-200 border border-base-300 text-xs font-mono font-semibold text-base-content/55">
+                          {isPaid ? (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={2.5}
+                              stroke="currentColor"
+                              className="h-3.5 w-3.5 text-success"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                          ) : (
+                            <span>{index + 1}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold tracking-tight leading-snug">{description}</h3>
+                          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                            <p className="font-mono text-sm tabular-nums text-base-content/80">
+                              {formatUnits(amount, USDC_DECIMALS)}{" "}
+                              <span className="text-base-content/45 font-normal">USDC</span>
+                            </p>
+                            {project.pm !== ZERO_ADDRESS && (
+                              <p className="text-xs text-base-content/50">
+                                PM fee {formatUnits((amount * project.pmFeeBps) / 10000n, USDC_DECIMALS)} (
+                                {pmFeePercent}%)
+                              </p>
                             )}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold tracking-tight leading-snug">{description}</h3>
-                            <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                              <p className="font-mono text-sm tabular-nums text-base-content/80">
-                                {formatUnits(amount, USDC_DECIMALS)}{" "}
-                                <span className="text-base-content/45 font-normal">USDC</span>
-                              </p>
-                              {project.pm !== ZERO_ADDRESS && (
-                                <p className="text-xs text-base-content/50">
-                                  PM fee {formatUnits((amount * project.pmFeeBps) / 10000n, USDC_DECIMALS)} ({pmFeePercent}%)
-                                </p>
-                              )}
+                          {!isUnassigned && (
+                            <div className="mt-3 flex items-center gap-2 address-mono text-xs text-base-content/55">
+                              <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/40">
+                                Worker
+                              </span>
+                              <Address
+                                address={assignee}
+                                chain={targetNetwork}
+                                size="xs"
+                                blockExplorerAddressLink={
+                                  targetNetwork.id === hardhat.id ? `/blockexplorer/address/${assignee}` : undefined
+                                }
+                              />
                             </div>
-                            {!isUnassigned && (
-                              <div className="mt-3 flex items-center gap-2 address-mono text-xs text-base-content/55">
-                                <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/40">
-                                  Worker
-                                </span>
-                                <Address
-                                  address={assignee}
-                                  chain={targetNetwork}
-                                  size="xs"
-                                  blockExplorerAddressLink={
-                                    targetNetwork.id === hardhat.id ? `/blockexplorer/address/${assignee}` : undefined
-                                  }
-                                />
-                              </div>
-                            )}
-                            {isUnassigned && status === MilestoneStatus.Created && (
-                              <p className="mt-2 text-xs text-base-content/50">
-                                Unassigned — waiting for a worker to accept.
-                              </p>
-                            )}
-                          </div>
+                          )}
+                          {isUnassigned && status === MilestoneStatus.Created && (
+                            <p className="mt-2 text-xs text-base-content/50">
+                              Unassigned — waiting for the client or PM to assign a verified worker.
+                            </p>
+                          )}
                         </div>
-                        <StatusBadge status={status} />
                       </div>
-
-                      {submissionNote && status >= MilestoneStatus.Submitted && (
-                        <div className="mt-4 ml-10 rounded-lg bg-base-200/60 border border-base-300 px-3 py-2.5">
-                          <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45 mb-1">
-                            Deliverable
-                          </p>
-                          <p className="font-mono text-[12px] leading-relaxed text-base-content/80 break-all max-h-24 overflow-y-auto">
-                            {submissionNote}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="mt-4 ml-11">
-                        <ApprovalActions
-                          projectId={projectId}
-                          milestoneIndex={index}
-                          status={status}
-                          assignee={assignee}
-                          role={role}
-                          onSuccess={handleRefresh}
-                        />
-                      </div>
+                      <StatusBadge status={status} />
                     </div>
-                  );
-                })}
-              </div>
+
+                    {submissionNote && status >= MilestoneStatus.Submitted && (
+                      <div className="mt-4 ml-10 rounded-lg bg-base-200/60 border border-base-300 px-3 py-2.5">
+                        <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45 mb-1">
+                          Deliverable
+                        </p>
+                        <p className="font-mono text-[12px] leading-relaxed text-base-content/80 break-all max-h-24 overflow-y-auto">
+                          {submissionNote}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-4 ml-11">
+                      <ApprovalActions
+                        projectId={projectId}
+                        milestoneIndex={index}
+                        status={status}
+                        assignee={assignee}
+                        role={role}
+                        onSuccess={handleRefresh}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
+        </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
@@ -449,12 +448,7 @@ const ProjectDetailPage: NextPage = () => {
               <QuickStat label="Milestones" value={Number(stats.totalMilestones).toString()} mono />
               <QuickStat label="Assigned" value={Number(stats.assignedMilestones).toString()} mono />
               <QuickStat label="Accepted" value={Number(stats.acceptedMilestones).toString()} mono />
-              <QuickStat
-                label="Paid out"
-                value={formatUnits(project.totalPaid, USDC_DECIMALS)}
-                suffix="USDC"
-                mono
-              />
+              <QuickStat label="Paid out" value={formatUnits(project.totalPaid, USDC_DECIMALS)} suffix="USDC" mono />
             </dl>
           </div>
         </div>
@@ -510,9 +504,7 @@ const QuickStat = ({
 }) => (
   <div className="px-6 py-3 flex items-baseline justify-between">
     <span className="text-xs text-base-content/55">{label}</span>
-    <span
-      className={`text-sm font-semibold tabular-nums ${mono ? "font-mono" : ""}`}
-    >
+    <span className={`text-sm font-semibold tabular-nums ${mono ? "font-mono" : ""}`}>
       {value}
       {suffix && <span className="ml-1 text-base-content/45 font-normal">{suffix}</span>}
     </span>
@@ -540,9 +532,7 @@ const ProjectDetailSkeleton = ({ projectId, onBack }: { projectId: number; onBac
           Back to projects
         </button>
         <div className="mt-3 flex items-baseline gap-3">
-          <span className="font-mono text-sm text-base-content/45">
-            #{projectId.toString().padStart(3, "0")}
-          </span>
+          <span className="font-mono text-sm text-base-content/45">#{projectId.toString().padStart(3, "0")}</span>
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">Project</h1>
         </div>
       </div>
@@ -608,15 +598,8 @@ const SkelLine = ({
   width?: string;
   height?: string;
   className?: string;
-}) => (
-  <div
-    className={`rounded-md bg-base-200 animate-pulse ${className}`}
-    style={{ width, height }}
-  />
-);
+}) => <div className={`rounded-md bg-base-200 animate-pulse ${className}`} style={{ width, height }} />;
 
-const SkelChip = () => (
-  <div className="h-6 w-20 rounded-full bg-base-200 animate-pulse" />
-);
+const SkelChip = () => <div className="h-6 w-20 rounded-full bg-base-200 animate-pulse" />;
 
 export default ProjectDetailPage;
