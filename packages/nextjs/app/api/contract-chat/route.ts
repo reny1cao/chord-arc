@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
       tools: { updateContractDraft: updateContractDraftTool },
       stopWhen: stepCountIs(4),
     });
-    return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse({ sendReasoning: false });
   } catch (err) {
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "stream error" }), {
       status: 502,
