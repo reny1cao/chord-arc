@@ -32,6 +32,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ai-sdk/openai-compatible@npm:^2.0.48":
+  version: 2.0.48
+  resolution: "@ai-sdk/openai-compatible@npm:2.0.48"
+  dependencies:
+    "@ai-sdk/provider": 3.0.10
+    "@ai-sdk/provider-utils": 4.0.27
+  peerDependencies:
+    zod: ^3.25.76 || ^4.1.8
+  checksum: 0e7e88a7954eabb8904626e9f3edf3e99f46eea5f9e7ff4ae13fdfdb01f36758c97c224fdf0ea2771ebfc428e617ca79439f1b92416bf4738aa85e50aaaeda44
+  languageName: node
+  linkType: hard
+
 "@ai-sdk/provider-utils@npm:4.0.27":
   version: 4.0.27
   resolution: "@ai-sdk/provider-utils@npm:4.0.27"
@@ -476,6 +488,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@chord/nextjs@workspace:packages/nextjs"
   dependencies:
+    "@ai-sdk/openai-compatible": ^2.0.48
     "@ai-sdk/react": ^3.0.193
     "@heroicons/react": ~2.1.5
     "@rainbow-me/rainbowkit": 2.2.9

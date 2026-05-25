@@ -6,9 +6,10 @@
  * a WorkContractDraft. The model fills one or two fields per turn — never
  * blasts all five at once — and asks the next question.
  *
- * Real path: AI Gateway (model string per Vercel guidance) via streamText.
- * Stub path: deterministic UIMessage stream so reviewers without an
- * AI_GATEWAY_API_KEY can still exercise the flow.
+ * Real path: Kimi (Moonshot CN) via OpenAI-compatible provider + streamText.
+ * Tool calling requires moonshot-v1-32k or larger — 8k does NOT support it.
+ * Stub path: deterministic UIMessage stream so reviewers without a
+ * KIMI_API_KEY can still exercise the flow.
  */
 import { NextRequest } from "next/server";
 import {
@@ -21,6 +22,7 @@ import {
   streamText,
   tool,
 } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
 import {
   EMPTY_WORK_CONTRACT_DRAFT,
@@ -40,7 +42,13 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const MODEL = "anthropic/claude-haiku-4-5-20251001";
+// Kimi is OpenAI-compatible. Existing /api/ai/split uses the same KIMI_API_KEY
+// against api.moonshot.cn — keep them in lockstep. Override via env if needed.
+const KIMI_BASE_URL = process.env.KIMI_BASE_URL || "https://api.moonshot.cn/v1";
+// kimi-k2.6 is the current flagship (262K context, native tool calling). If the
+// account's endpoint doesn't have it yet, override with KIMI_CHAT_MODEL — e.g.
+// moonshot-v1-32k for the v1 series, or kimi-k2-0905-preview for an earlier K2.
+const KIMI_CHAT_MODEL = process.env.KIMI_CHAT_MODEL || "kimi-k2.6";
 
 const draftSchema = z.object({
   result: z.string(),
@@ -85,6 +93,7 @@ function systemPrompt(draft: WorkContractDraft): string {
     "- failure: revision and reject rules",
     "",
     "RULES (strict):",
+    "- Respond in the user's language. Default to English; switch to Chinese only if the user writes in Chinese.",
     "- Each turn, ask ONE question, about ONE field. Never bulk-ask multiple fields.",
     "- When the user provides info, call the `updateContractDraft` tool to set one or two fields based on what they said, then ask about the next empty field.",
     "- Keep replies short (1-3 sentences). Don't lecture.",
@@ -115,10 +124,17 @@ export async function POST(req: NextRequest) {
   const draft = sanitizeDraft(body.draft);
   const messages = Array.isArray(body.messages) ? body.messages : [];
 
-  const apiKey = process.env.AI_GATEWAY_API_KEY;
+  const apiKey = process.env.KIMI_API_KEY;
   if (!apiKey) {
     return stubResponse(messages, draft);
   }
+
+  const kimi = createOpenAICompatible({
+    name: "kimi",
+    apiKey,
+    baseURL: KIMI_BASE_URL,
+  });
+  const model = kimi.chatModel(KIMI_CHAT_MODEL);
 
   const updateContractDraftTool = tool({
     description:
@@ -140,7 +156,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = streamText({
-      model: MODEL,
+      model,
       system: systemPrompt(draft),
       messages: await convertToModelMessages(messages),
       tools: { updateContractDraft: updateContractDraftTool },
