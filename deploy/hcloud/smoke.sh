@@ -15,7 +15,9 @@ fetch() {
 assert_contains() {
   local path="$1"
   local needle="$2"
-  if ! fetch "$path" | grep -Fq "$needle"; then
+  local body
+  body="$(fetch "$path")"
+  if [[ "$body" != *"$needle"* ]]; then
     log "expected $path to contain: $needle"
     exit 1
   fi
@@ -27,7 +29,8 @@ assert_contains "/projects" "Contracts"
 assert_contains "/work" "Worker view"
 assert_contains "/agents" "Agents supply center"
 
-if ! fetch "/api/agents" | grep -Fq "prediction-market-pyagent"; then
+agents_body="$(fetch "/api/agents")"
+if [[ "$agents_body" != *"prediction-market-pyagent"* ]]; then
   log "expected /api/agents to include prediction-market-pyagent"
   exit 1
 fi
