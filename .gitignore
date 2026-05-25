@@ -35,6 +35,9 @@ packages/hardhat/coverage.json
 *.sqlite
 *.sqlite-journal
 
+# off-chain work contract storage (content-addressed JSON for /api/contracts)
+.chord-contracts/
+
 # secrets
 .env
 .env.local
