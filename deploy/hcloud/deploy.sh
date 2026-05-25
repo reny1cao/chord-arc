@@ -83,7 +83,8 @@ $domain {
 # END CHORD MANAGED
 EOF
 
-mv "$tmp" "$file"
+cat "$tmp" > "$file"
+rm -f "$tmp"
 caddy fmt --overwrite "$file"
 caddy reload --config "$file"
 SCRIPT
