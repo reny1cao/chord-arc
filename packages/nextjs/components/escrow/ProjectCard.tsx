@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
 import { formatUnits } from "viem";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
@@ -124,7 +125,14 @@ export const ProjectCard = ({
             </div>
             <div className="font-mono text-[11px] text-base-content/55 tabular-nums">{remainingDisplay} remaining</div>
           </div>
-          <ArrowRightIcon className="h-4 w-4 text-base-content/40 group-hover:text-primary group-hover:translate-x-0.5 transition" />
+          <Link
+            href={`/projects/${projectId}`}
+            onClick={e => e.stopPropagation()}
+            className="btn btn-sm bg-base-200 border border-base-300 gap-1.5"
+          >
+            Open
+            <ArrowRightIcon className="h-4 w-4" />
+          </Link>
         </div>
       </div>
     </article>

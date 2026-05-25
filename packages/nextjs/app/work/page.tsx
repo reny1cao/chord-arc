@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
 import type { NextPage } from "next";
@@ -128,13 +128,51 @@ const WorkPage: NextPage = () => {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {projectIds.map(id => (
-            <WorkProjectItem key={id} projectId={id} filter={activeFilter} viewerAddress={address} />
-          ))}
-        </div>
+        <WorkProjectList projectIds={projectIds} filter={activeFilter} viewerAddress={address} />
       )}
     </div>
+  );
+};
+
+const WorkProjectList = ({
+  projectIds,
+  filter,
+  viewerAddress,
+}: {
+  projectIds: number[];
+  filter: WorkFilter;
+  viewerAddress?: string;
+}) => {
+  const [matchCounts, setMatchCounts] = useState<Record<number, number>>({});
+  const listKey = `${filter}:${viewerAddress ?? "anon"}:${projectIds.join(",")}`;
+
+  useEffect(() => {
+    setMatchCounts({});
+  }, [listKey]);
+
+  const handleResolved = useCallback((projectId: number, count: number) => {
+    setMatchCounts(prev => (prev[projectId] === count ? prev : { ...prev, [projectId]: count }));
+  }, []);
+
+  const resolvedCount = Object.keys(matchCounts).length;
+  const totalMatches = Object.values(matchCounts).reduce((sum, count) => sum + count, 0);
+  const isResolved = projectIds.length > 0 && resolvedCount === projectIds.length;
+
+  return (
+    <>
+      <div className="grid gap-4">
+        {projectIds.map(id => (
+          <WorkProjectItem
+            key={id}
+            projectId={id}
+            filter={filter}
+            viewerAddress={viewerAddress}
+            onResolved={handleResolved}
+          />
+        ))}
+      </div>
+      {isResolved && totalMatches === 0 && <WorkEmptyState filter={filter} hasAddress={Boolean(viewerAddress)} />}
+    </>
   );
 };
 
@@ -142,10 +180,12 @@ const WorkProjectItem = ({
   projectId,
   filter,
   viewerAddress,
+  onResolved,
 }: {
   projectId: number;
   filter: WorkFilter;
   viewerAddress?: string;
+  onResolved: (projectId: number, count: number) => void;
 }) => {
   const {
     data: projectData,
@@ -206,29 +246,44 @@ const WorkProjectItem = ({
   // on-chain pointer isn't available yet so it no-ops.
   const { contract: workContract } = useWorkContract(project?.contractURI);
 
-  if (isLoadingProject || isLoadingMilestones) return <WorkCardSkeleton />;
-  if (!project?.client || !milestones) return null;
-
   const viewer = viewerAddress?.toLowerCase();
-  const workItems = buildWorkItems({
-    projectId,
-    client: project.client,
-    pm: project.pm,
-    descriptions: milestones.descriptions,
-    amounts: milestones.amounts,
-    assignees: milestones.assignees,
-    statuses: milestones.statuses,
-    submissionNotes: milestones.submissionNotes,
-    contract: workContract,
-  });
+  const workItems = useMemo(() => {
+    if (!project?.client || !milestones) return [];
+    return buildWorkItems({
+      projectId,
+      client: project.client,
+      pm: project.pm,
+      descriptions: milestones.descriptions,
+      amounts: milestones.amounts,
+      assignees: milestones.assignees,
+      statuses: milestones.statuses,
+      submissionNotes: milestones.submissionNotes,
+      contract: workContract,
+    });
+  }, [milestones, project, projectId, workContract]);
 
-  const matched = workItems.filter(item => {
-    const isMine = viewer && item.assignee.toLowerCase() === viewer;
-    if (!project.active) return false;
-    if (filter === "open") return isUnassignedWork(item);
-    if (filter === "assigned") return Boolean(isMine && isActiveWorkStatus(item.status));
-    return Boolean(isMine && isAwaitingReviewStatus(item.status));
-  });
+  const matched = useMemo(
+    () =>
+      workItems.filter(item => {
+        const isMine = viewer && item.assignee.toLowerCase() === viewer;
+        if (!project?.active) return false;
+        if (filter === "open") return isUnassignedWork(item);
+        if (filter === "assigned") return Boolean(isMine && isActiveWorkStatus(item.status));
+        return Boolean(isMine && isAwaitingReviewStatus(item.status));
+      }),
+    [filter, project?.active, viewer, workItems],
+  );
+
+  const isLoading = isLoadingProject || isLoadingMilestones;
+
+  useEffect(() => {
+    if (!isLoading) {
+      onResolved(projectId, matched.length);
+    }
+  }, [isLoading, matched.length, onResolved, projectId]);
+
+  if (isLoading) return <WorkCardSkeleton />;
+  if (!project?.client || !milestones) return null;
 
   if (matched.length === 0) return null;
 
@@ -248,6 +303,36 @@ const WorkProjectItem = ({
         />
       ))}
     </>
+  );
+};
+
+const WorkEmptyState = ({ filter, hasAddress }: { filter: WorkFilter; hasAddress: boolean }) => {
+  const copy =
+    filter === "open"
+      ? {
+          title: "No open work right now",
+          body: "Funded contracts that still need assignment will appear here.",
+        }
+      : filter === "assigned"
+        ? {
+            title: hasAddress ? "No work assigned to this wallet" : "Connect a worker wallet",
+            body: hasAddress
+              ? "Ask the client or PM to assign this worker address before starting."
+              : "Assigned work is scoped to the connected assignee address.",
+          }
+        : {
+            title: hasAddress ? "No submitted work waiting for review" : "Connect a worker wallet",
+            body: hasAddress
+              ? "Submitted proof packages for this worker will appear here until the client reviews them."
+              : "Submitted work is scoped to the connected assignee address.",
+          };
+
+  return (
+    <div className="rounded-2xl border border-base-300 bg-base-100 px-6 py-12 text-center">
+      <div className="text-[11px] uppercase tracking-[0.18em] font-semibold text-base-content/45">Empty</div>
+      <h3 className="mt-3 text-xl font-semibold tracking-tight">{copy.title}</h3>
+      <p className="mt-2 text-sm text-base-content/65 max-w-sm mx-auto">{copy.body}</p>
+    </div>
   );
 };
 

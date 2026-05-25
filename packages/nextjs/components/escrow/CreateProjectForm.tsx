@@ -44,6 +44,8 @@ import { notification } from "~~/utils/scaffold-eth";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const DRAFT_STORAGE_KEY = "chord:create-project-draft:v1";
+const MIN_MILESTONE_AMOUNT_USDC = "1";
+const MIN_MILESTONE_AMOUNT = parseUnits(MIN_MILESTONE_AMOUNT_USDC, USDC_DECIMALS);
 
 interface MilestoneInput {
   description: string;
@@ -385,7 +387,7 @@ export const CreateProjectForm = () => {
       m =>
         m.description.trim().length > 0 &&
         m.description.length <= MILESTONE_DESCRIPTION_MAX &&
-        safeParseUsdc(m.amount) > 0n &&
+        safeParseUsdc(m.amount) >= MIN_MILESTONE_AMOUNT &&
         (!m.assignee || isAddress(m.assignee)),
     );
   }, [milestones]);
@@ -656,6 +658,8 @@ export const CreateProjectForm = () => {
                 const descLen = milestone.description.length;
                 const descOver = descLen > MILESTONE_DESCRIPTION_RECOMMENDED;
                 const descHardOver = descLen > MILESTONE_DESCRIPTION_MAX;
+                const parsedAmount = safeParseUsdc(milestone.amount);
+                const amountUnderMinimum = milestone.amount.trim() !== "" && parsedAmount < MIN_MILESTONE_AMOUNT;
                 return (
                   <div key={index} className="flex gap-4 items-start">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-base-300 text-sm font-bold">
@@ -695,7 +699,7 @@ export const CreateProjectForm = () => {
                           <input
                             type="number"
                             step="0.01"
-                            min="0.01"
+                            min={MIN_MILESTONE_AMOUNT_USDC}
                             className="input input-bordered join-item w-full"
                             placeholder="10"
                             value={milestone.amount}
@@ -725,6 +729,11 @@ export const CreateProjectForm = () => {
                           </svg>
                         </button>
                       </div>
+                      {amountUnderMinimum && (
+                        <p className="text-[11px] font-medium text-error">
+                          Minimum escrow per milestone is {MIN_MILESTONE_AMOUNT_USDC} USDC.
+                        </p>
+                      )}
                       <div className="space-y-1">
                         <div className="flex items-baseline justify-between">
                           <label
