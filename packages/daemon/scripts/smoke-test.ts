@@ -135,6 +135,10 @@ const escrowExtraAbi = [
     name: "createProject",
     stateMutability: "nonpayable",
     inputs: [
+      // Wave-1: off-chain WorkContract pointer. Empty string == no off-chain
+      // contract attached — the smoke test exercises this legacy path so it
+      // stays signer-only and doesn't need a Next.js server.
+      { name: "contractURI", type: "string" },
       { name: "pm", type: "address" },
       { name: "pmFeeBps", type: "uint256" },
       { name: "descriptions", type: "string[]" },
@@ -161,19 +165,6 @@ const escrowExtraAbi = [
       { name: "milestoneIndex", type: "uint256", indexed: false },
       { name: "amount", type: "uint256", indexed: false },
       { name: "autoReleased", type: "bool", indexed: false },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "ProjectCreated",
-    inputs: [
-      { name: "projectId", type: "uint256", indexed: true },
-      { name: "client", type: "address", indexed: true },
-      { name: "pm", type: "address", indexed: false },
-      { name: "pmFeeBps", type: "uint256", indexed: false },
-      { name: "totalAmount", type: "uint256", indexed: false },
-      { name: "milestoneCount", type: "uint256", indexed: false },
     ],
     anonymous: false,
   },
@@ -485,6 +476,7 @@ async function main(): Promise<void> {
       abi: allEscrowAbi,
       functionName: "createProject",
       args: [
+        "", // wave-1 contractURI — empty == legacy flat-description path
         "0x0000000000000000000000000000000000000000" as Address, // no PM
         0n,
         [milestoneDescription],

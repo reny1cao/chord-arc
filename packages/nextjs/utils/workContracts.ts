@@ -1,4 +1,5 @@
 import type { Address as AddressType } from "viem";
+import type { WorkContract } from "~~/types/contract";
 
 export interface WorkContractSections {
   result: string;
@@ -18,6 +19,14 @@ export interface WorkItem {
   proof: string;
   acceptance: string;
   failure: string;
+  /**
+   * Wave-2: per-milestone deliverable summary. When the project carries an
+   * off-chain WorkContract, this is the milestone description verbatim (short
+   * one-liner). When no contract is supplied, this is the first non-blank line
+   * of the legacy flat description — useful when callers want the milestone
+   * label without re-running the section-splitter.
+   */
+  deliverable: string;
   payout: bigint;
   client: AddressType;
   pm: AddressType;
@@ -77,6 +86,13 @@ export function parseWorkContractSections(description: string): WorkContractSect
   };
 }
 
+function firstLine(text: string, max = 200): string {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  const line = trimmed.split(/\r?\n/, 1)[0]?.trim() ?? "";
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
+}
+
 export function buildWorkItems({
   projectId,
   client,
@@ -86,6 +102,7 @@ export function buildWorkItems({
   assignees,
   statuses,
   submissionNotes,
+  contract,
 }: {
   projectId: number;
   client: string;
@@ -95,8 +112,35 @@ export function buildWorkItems({
   assignees: readonly string[];
   statuses: readonly number[];
   submissionNotes: readonly string[];
+  /**
+   * Wave-2: project-level off-chain WorkContract. When provided, every
+   * WorkItem gets R/A/P/A/F stamped from the contract — the milestone
+   * `description` is treated as the per-deliverable summary. When omitted,
+   * `parseWorkContractSections` runs against each description (legacy path).
+   */
+  contract?: WorkContract;
 }): WorkItem[] {
   return descriptions.map((description, milestoneIndex) => {
+    if (contract) {
+      const deliverable = description.trim();
+      return {
+        projectId,
+        milestoneIndex,
+        status: Number(statuses[milestoneIndex] ?? WORK_STATUS.Created),
+        result: contract.result,
+        authority: contract.authority,
+        proof: contract.proof,
+        acceptance: contract.acceptance,
+        failure: contract.failure,
+        deliverable,
+        payout: amounts[milestoneIndex] ?? 0n,
+        client: client as AddressType,
+        pm: pm as AddressType,
+        assignee: (assignees[milestoneIndex] || ZERO_ADDRESS) as AddressType,
+        submissionNote: submissionNotes[milestoneIndex] || "",
+      };
+    }
+
     const sections = parseWorkContractSections(description);
     return {
       projectId,
@@ -107,6 +151,9 @@ export function buildWorkItems({
       proof: sections.proof,
       acceptance: sections.acceptance,
       failure: sections.failure,
+      // Legacy path: use the first line of the raw description as a sensible
+      // milestone label. The full parsed sections still live on result/etc.
+      deliverable: firstLine(sections.raw),
       payout: amounts[milestoneIndex] ?? 0n,
       client: client as AddressType,
       pm: pm as AddressType,

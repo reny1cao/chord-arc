@@ -10,7 +10,8 @@
     "pm": "tsx src/index.ts --pm",
     "bootstrap-sca": "tsx src/bootstrap-sca.ts",
     "check-types": "tsc --noEmit",
-    "smoke": "tsx scripts/smoke-test.ts"
+    "smoke": "tsx scripts/smoke-test.ts",
+    "smoke-contract": "tsx scripts/smoke-contract-fetch.ts"
   },
   "dependencies": {
     "@circle-fin/developer-controlled-wallets": "^10.3.1",

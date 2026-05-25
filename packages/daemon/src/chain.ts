@@ -117,6 +117,8 @@ export interface ProjectCreatedEvent {
   pmFeeBps: bigint;
   totalAmount: bigint;
   milestoneCount: bigint;
+  /** Wave-2: off-chain WorkContract pointer (chord://<hash>); "" for legacy projects. */
+  contractURI: string;
   blockNumber: bigint;
   transactionHash: Hex;
 }
@@ -156,6 +158,7 @@ export function watchProjectCreated(opts: WatchProjectCreatedOpts): () => void {
           pmFeeBps?: bigint;
           totalAmount?: bigint;
           milestoneCount?: bigint;
+          contractURI?: string;
         };
         if (
           args.projectId === undefined ||
@@ -175,6 +178,9 @@ export function watchProjectCreated(opts: WatchProjectCreatedOpts): () => void {
           pmFeeBps: args.pmFeeBps,
           totalAmount: args.totalAmount,
           milestoneCount: args.milestoneCount,
+          // Wave-2: contractURI is non-indexed; viem decodes it but it may be
+          // absent on legacy logs predating the field. Default to "".
+          contractURI: args.contractURI ?? "",
           blockNumber: log.blockNumber ?? 0n,
           transactionHash: log.transactionHash ?? ("0x" as Hex),
         });
@@ -218,5 +224,48 @@ export async function readMilestone(opts: {
     createdAt: raw[4],
     submittedAt: raw[5],
     submissionNote: raw[6],
+  };
+}
+
+export interface ReadProjectResult {
+  client: Address;
+  pm: Address;
+  pmFeeBps: bigint;
+  totalAmount: bigint;
+  totalPaid: bigint;
+  totalPmFees: bigint;
+  active: boolean;
+  milestoneCount: bigint;
+  /** Wave-2: off-chain WorkContract pointer (chord://<hash>); "" for legacy projects. */
+  contractURI: string;
+}
+
+/**
+ * Read a project's tuple including the wave-2 `contractURI` pointer. Mirrors
+ * `ChordEscrow.getProject` exactly — 9 fields in declared order. The daemon
+ * uses this on `MilestoneAssigned` so it can fetch the off-chain R/A/P/A/F
+ * before spawning the agent CLI.
+ */
+export async function readProject(opts: {
+  escrowAddress: Address;
+  projectId: bigint;
+}): Promise<ReadProjectResult> {
+  const raw = (await publicClient.readContract({
+    address: getAddress(opts.escrowAddress),
+    abi: chordEscrowAbi,
+    functionName: "getProject",
+    args: [opts.projectId],
+  })) as readonly [Address, Address, bigint, bigint, bigint, bigint, boolean, bigint, string];
+
+  return {
+    client: raw[0],
+    pm: raw[1],
+    pmFeeBps: raw[2],
+    totalAmount: raw[3],
+    totalPaid: raw[4],
+    totalPmFees: raw[5],
+    active: raw[6],
+    milestoneCount: raw[7],
+    contractURI: raw[8],
   };
 }

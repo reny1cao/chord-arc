@@ -26,7 +26,8 @@ Modules wired (integrator stitches them in `index.ts`):
 | `chord-escrow-abi.ts` | `chordEscrowAbi`, `MilestoneStatus` | Hardcoded minimal ABI (event + 3 fns) for viem inference. No typechain dep. |
 | `chain.ts` | `publicClient`, `arcTestnet`, `watchMilestoneAssigned`, `readMilestone` | viem client + event subscription filtered server-side on `assignee == mySCA`. |
 | `circle.ts` | `createCircleClient`, `getWalletAddress`, `signAndSendContractCall`, `waitForTxHash` | Thin wrap of `@circle-fin/developer-controlled-wallets`. The create call returns Circle's internal `txId`, NOT an on-chain hash — `waitForTxHash` polls for it. |
-| `agent-runner.ts` | `runAgentForMilestone` | Spawns the agent CLI in `<dataDir>/milestones/<pid>-<idx>/`, writes `BRIEF.md`, streams stdout/stderr to `onLog` + `run.log`, hashes `out/` (or cwd if `out/` is empty). |
+| `agent-runner.ts` | `runAgentForMilestone` | Spawns the agent CLI in `<dataDir>/milestones/<pid>-<idx>/`, writes `BRIEF.md` (structured R/A/P/A/F when an off-chain contract is passed, legacy flat description otherwise), streams stdout/stderr to `onLog` + `run.log`, hashes `out/` (or cwd if `out/` is empty). |
+| `work-contract.ts` | `fetchAndVerifyContract`, `parseContractURI`, `canonicalize`, `hashContract` | Fetches `Project.contractURI` from the Next.js `/api/contracts/[hash]` endpoint and verifies `sha256(canonicalJson) === hash` before handing the contract to `agent-runner`. Reimplements the canonical-JSON key order from `packages/nextjs/types/contract.ts` (daemon can't import across workspaces). |
 | `sse-server.ts` | `startServer({ snapshot })`, returns `{ emit, stop, port, clientCount }` | Express on `config.httpPort`, serves `/`, `/events` (SSE), `/status` (JSON). |
 | `state.ts` | `loadState(dataDir)` → `StateHandle` (`get`, `setSca`, `upsertRun`, `patchRun`, `listRuns`, `flush`) | In-memory + debounced JSON persistence. No SQLite (better-sqlite3 fails to build on Node 26). |
 | `bootstrap-sca.ts` | standalone script | Creates Circle WalletSet + SCA on Arc Testnet. Deterministic idempotency keys so reruns don't dupe. |
@@ -52,6 +53,28 @@ CHORD_AGENT_CLI=                       # optional absolute path; otherwise auto-
 CHORD_HTTP_PORT=7717                   # dashboard SSE port
 CHORD_LOCAL_PRIVATE_KEY=               # OPTIONAL — when set, bypasses Circle and signs locally
                                        # with a viem LocalAccount. Used by the smoke test.
+CHORD_CONTRACTS_BASE_URL=              # OPTIONAL — base URL of the Next.js host serving
+                                       # /api/contracts/[hash]. Defaults to http://localhost:3000.
+                                       # The daemon fetches the off-chain WorkContract from
+                                       # `${CHORD_CONTRACTS_BASE_URL}/api/contracts/<sha256-hex>`
+                                       # whenever a project's on-chain contractURI is set.
+```
+
+## Wave-2: on-chain `Project.contractURI`
+
+`ChordEscrow.Project` carries a `string contractURI` (set at `createProject` time) that points at a content-addressed off-chain `WorkContract` — the full R/A/P/A/F — stored under the Next.js `/api/contracts/[hash]` endpoint. The URI format is `chord://<sha256-hex>`. Empty string means "legacy project; no off-chain contract".
+
+The daemon picks this up automatically:
+
+1. On `MilestoneAssigned` it calls `readProject(...)` to fetch the project tuple including `contractURI`.
+2. If non-empty, it calls `fetchAndVerifyContract({ uri, baseUrl: CHORD_CONTRACTS_BASE_URL })`. The fetcher re-canonicalizes the JSON (spec key order) and hashes it locally; any sha256 mismatch throws and the daemon falls back to the legacy flat-description brief.
+3. The verified `WorkContract` is handed to `agent-runner.ts`, which renders BRIEF.md with structured `# Contract / ## Result / ## Authority / ## Proof / ## Acceptance / ## Failure` sections plus a `# This milestone` section sourced from the per-deliverable description and a `# Payout` section sourced from `milestone.amount`.
+4. If the project has no `contractURI`, the daemon emits the previous flat-description brief — older deployments keep working unchanged.
+
+A focused smoke test for the parse/fetch/verify pipeline (no chain, no real server) ships at `scripts/smoke-contract-fetch.ts`:
+
+```bash
+yarn workspace @chord/daemon smoke-contract
 ```
 
 ## Signing modes

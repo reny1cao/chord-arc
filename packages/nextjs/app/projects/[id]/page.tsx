@@ -11,7 +11,10 @@ import { MilestoneStatus, StatusBadge } from "~~/components/escrow/StatusBadge";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { getRoleLabel, useProjectRole } from "~~/hooks/useProjectRole";
+import { useWorkContract } from "~~/hooks/useWorkContract";
 import { USDC_DECIMALS } from "~~/utils/erc20";
+import { type WorkContract } from "~~/types/contract";
+import { type WorkContractSections, parseWorkContractSections } from "~~/utils/workContracts";
 
 // Dynamic import for heavy component (418 lines) - only loads when needed
 const ApprovalActions = dynamic(
@@ -31,6 +34,8 @@ interface ProjectData {
   totalPmFees: bigint;
   active: boolean;
   milestoneCount: bigint;
+  /** Wave-2: off-chain WorkContract pointer (`chord://<hash>`); "" for legacy projects. */
+  contractURI: string;
 }
 
 interface MilestonesData {
@@ -90,7 +95,8 @@ const ProjectDetailPage: NextPage = () => {
   });
 
   // Parse project data - handle array return type
-  // ChordEscrow.getProject returns: (client, pm, pmFeeBps, totalAmount, totalPaid, totalPmFees, active, milestoneCount)
+  // ChordEscrow.getProject (wave-1+) returns:
+  // (client, pm, pmFeeBps, totalAmount, totalPaid, totalPmFees, active, milestoneCount, contractURI)
   const project = useMemo((): ProjectData | undefined => {
     if (!projectData) return undefined;
     if (Array.isArray(projectData)) {
@@ -103,9 +109,11 @@ const ProjectDetailPage: NextPage = () => {
         totalPmFees: projectData[5] as bigint,
         active: projectData[6] as boolean,
         milestoneCount: projectData[7] as bigint,
+        contractURI: (projectData[8] as string | undefined) ?? "",
       };
     }
-    return projectData as unknown as ProjectData;
+    const fallback = projectData as unknown as ProjectData;
+    return { ...fallback, contractURI: fallback.contractURI ?? "" };
   }, [projectData]);
 
   // Parse milestones data - handle array return type
@@ -145,6 +153,30 @@ const ProjectDetailPage: NextPage = () => {
   // Check if project data is valid
   const isProjectValid = project?.client;
   const isDataReady = isProjectValid && milestones?.descriptions && stats;
+
+  // Wave-2: pull the off-chain WorkContract (R/A/P/A/F) referenced by the
+  // project's contractURI. Empty URI == legacy project; the hook returns
+  // {contract: undefined, isLoading: false} and we render the per-milestone
+  // fallback below.
+  const {
+    contract: workContract,
+    isLoading: isLoadingContract,
+    error: contractError,
+  } = useWorkContract(project?.contractURI);
+
+  // Legacy-only: when there's no contract URI we used to parse R/A/P/A/F out
+  // of milestone descriptions. We preserve that for older deployments — but
+  // only pull it from the first non-empty milestone (project-level scope).
+  const legacySections = useMemo(() => {
+    if (workContract || !milestones?.descriptions?.length) return undefined;
+    for (const desc of milestones.descriptions) {
+      const parsed = parseWorkContractSections(desc);
+      if (parsed.authority || parsed.proof || parsed.acceptance || parsed.failure) {
+        return parsed;
+      }
+    }
+    return undefined;
+  }, [workContract, milestones?.descriptions]);
 
   const role = useProjectRole(
     isProjectValid
@@ -282,6 +314,18 @@ const ProjectDetailPage: NextPage = () => {
             </div>
           </div>
 
+          {/* Contract terms — rendered once at the project level (wave-2 R/A/P/A/F).
+              When the project carries a contractURI, the off-chain WorkContract is
+              the canonical source. When it doesn't (legacy), we fall back to the
+              first milestone description that contains the section markers. */}
+          <ContractTermsCard
+            contract={workContract}
+            isLoading={isLoadingContract}
+            error={contractError}
+            legacy={legacySections}
+            hasContractURI={Boolean(project.contractURI)}
+          />
+
           {/* Milestones */}
           <div className="rounded-2xl border border-base-300 bg-base-100 p-6">
             <h2 className="text-base font-semibold tracking-tight">Milestones</h2>
@@ -292,6 +336,12 @@ const ProjectDetailPage: NextPage = () => {
                 const assignee = milestones.assignees[index];
                 const submissionNote = milestones.submissionNotes[index];
                 const isUnassigned = !assignee || assignee === ZERO_ADDRESS;
+                // Wave-2: when a contract is loaded, the on-chain description IS the
+                // per-deliverable summary. Otherwise we strip the R/A/P/A/F sections
+                // and surface just the headline for the milestone heading.
+                const heading = workContract
+                  ? description.trim() || `Milestone ${index + 1}`
+                  : parseWorkContractSections(description).result || description.trim() || `Milestone ${index + 1}`;
 
                 const isPaid = status === MilestoneStatus.Paid;
                 return (
@@ -319,7 +369,7 @@ const ProjectDetailPage: NextPage = () => {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold tracking-tight leading-snug">{description}</h3>
+                          <h3 className="font-semibold tracking-tight leading-snug">{heading}</h3>
                           <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                             <p className="font-mono text-sm tabular-nums text-base-content/80">
                               {formatUnits(amount, USDC_DECIMALS)}{" "}
@@ -458,6 +508,101 @@ const ProjectDetailPage: NextPage = () => {
 };
 
 /* ───────────────────── Subcomponents ───────────────────── */
+
+const RAPAF_LABELS: Array<{ key: keyof WorkContract; label: string; hint: string }> = [
+  { key: "result", label: "Result", hint: "What gets delivered" },
+  { key: "authority", label: "Authority", hint: "What the worker may / may not do" },
+  { key: "proof", label: "Proof", hint: "Evidence required at submission" },
+  { key: "acceptance", label: "Acceptance", hint: "Pass criteria" },
+  { key: "failure", label: "Failure", hint: "Revision / reject rules" },
+];
+
+const ContractTermsCard = ({
+  contract,
+  isLoading,
+  error,
+  legacy,
+  hasContractURI,
+}: {
+  contract: WorkContract | undefined;
+  isLoading: boolean;
+  error: string | undefined;
+  legacy: WorkContractSections | undefined;
+  hasContractURI: boolean;
+}) => {
+  if (hasContractURI && isLoading) {
+    return (
+      <div className="rounded-2xl border border-base-300 bg-base-100 p-6 animate-pulse">
+        <SkelLine width="6rem" height="0.875rem" />
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} className="space-y-2">
+              <SkelLine width="4rem" height="0.625rem" />
+              <SkelLine width="100%" />
+              <SkelLine width="80%" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (hasContractURI && error) {
+    return (
+      <div className="rounded-2xl border border-warning/40 bg-warning/5 p-6">
+        <h2 className="text-base font-semibold tracking-tight">Contract terms</h2>
+        <p className="mt-2 text-sm text-warning">
+          Could not load the off-chain contract for this project ({error}). The on-chain URI is
+          present but the JSON could not be fetched or verified.
+        </p>
+      </div>
+    );
+  }
+
+  const source: Pick<WorkContract, "result" | "authority" | "proof" | "acceptance" | "failure"> | undefined = contract
+    ? contract
+    : legacy
+      ? {
+          result: legacy.result,
+          authority: legacy.authority,
+          proof: legacy.proof,
+          acceptance: legacy.acceptance,
+          failure: legacy.failure,
+        }
+      : undefined;
+
+  if (!source) {
+    // No URI and no legacy sections — nothing meaningful to render. Keep the
+    // detail page clean by not surfacing an empty card.
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl border border-base-300 bg-base-100 p-6">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-base font-semibold tracking-tight">Contract terms</h2>
+        <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">
+          {contract ? "Off-chain" : "Legacy"}
+        </span>
+      </div>
+      <div className="mt-5 grid gap-5 sm:grid-cols-2">
+        {RAPAF_LABELS.map(({ key, label, hint }) => {
+          const value = (source[key as keyof typeof source] as string | undefined)?.trim();
+          if (!value) return null;
+          return (
+            <div key={key}>
+              <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-base-content/45">{label}</p>
+              <p className="text-[10px] text-base-content/40 mt-0.5">{hint}</p>
+              <p className="mt-2 text-sm leading-relaxed text-base-content/80 whitespace-pre-wrap break-words">
+                {value}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 const ProgressStat = ({ label, value, muted }: { label: string; value: string; muted?: boolean }) => (
   <div className="bg-base-100 px-4 py-3">

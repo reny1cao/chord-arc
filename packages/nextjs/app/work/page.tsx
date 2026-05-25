@@ -9,6 +9,7 @@ import { useAccount } from "wagmi";
 import { ApprovalActions } from "~~/components/escrow/ApprovalActions";
 import { StatusBadge } from "~~/components/escrow/StatusBadge";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth/useScaffoldReadContract";
+import { useWorkContract } from "~~/hooks/useWorkContract";
 import { USDC_DECIMALS } from "~~/utils/erc20";
 import {
   type WorkItem,
@@ -28,6 +29,8 @@ interface ProjectData {
   totalPmFees: bigint;
   active: boolean;
   milestoneCount: bigint;
+  /** Wave-2: off-chain WorkContract pointer (`chord://<hash>`); "" for legacy projects. */
+  contractURI: string;
 }
 
 interface MilestonesData {
@@ -176,9 +179,11 @@ const WorkProjectItem = ({
         totalPmFees: projectData[5] as bigint,
         active: projectData[6] as boolean,
         milestoneCount: projectData[7] as bigint,
+        contractURI: (projectData[8] as string | undefined) ?? "",
       };
     }
-    return projectData as unknown as ProjectData;
+    const fallback = projectData as unknown as ProjectData;
+    return { ...fallback, contractURI: fallback.contractURI ?? "" };
   }, [projectData]);
 
   const milestones = useMemo((): MilestonesData | undefined => {
@@ -196,6 +201,11 @@ const WorkProjectItem = ({
     return milestonesData as unknown as MilestonesData;
   }, [milestonesData]);
 
+  // Wave-2: pull the off-chain contract for this project, if any. We MUST
+  // call the hook unconditionally (Rules of Hooks) — pass undefined when the
+  // on-chain pointer isn't available yet so it no-ops.
+  const { contract: workContract } = useWorkContract(project?.contractURI);
+
   if (isLoadingProject || isLoadingMilestones) return <WorkCardSkeleton />;
   if (!project?.client || !milestones) return null;
 
@@ -209,6 +219,7 @@ const WorkProjectItem = ({
     assignees: milestones.assignees,
     statuses: milestones.statuses,
     submissionNotes: milestones.submissionNotes,
+    contract: workContract,
   });
 
   const matched = workItems.filter(item => {
@@ -268,7 +279,16 @@ const WorkCard = ({
             </span>
             <StatusBadge status={item.status} />
           </div>
-          <h2 className="mt-3 text-xl font-semibold tracking-tight">{item.result}</h2>
+          {/* Wave-2: heading = per-milestone deliverable when present, falling back
+              to the project-level Result. The R/A/P/A/F blocks below come from the
+              same source (contract OR legacy regex parse), so they're project-level
+              for contract-driven projects and per-milestone for legacy ones. */}
+          <h2 className="mt-3 text-xl font-semibold tracking-tight">
+            {item.deliverable || item.result || `Milestone ${item.milestoneIndex + 1}`}
+          </h2>
+          {item.deliverable && item.result && item.deliverable !== item.result && (
+            <p className="mt-1.5 text-xs text-base-content/55">{item.result}</p>
+          )}
           <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
             <InfoBlock label="Acceptance" value={item.acceptance || "Client reviews the submitted proof package."} />
             <InfoBlock label="Proof package" value={item.proof || item.submissionNote || "Not declared yet."} />

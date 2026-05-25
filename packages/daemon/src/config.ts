@@ -34,6 +34,13 @@ export const config = {
   daemonName: process.env.CHORD_DAEMON_NAME || "chord-daemon-0",
   dataDir: process.env.CHORD_DATA_DIR || ".chord",
 
+  // Wave-2: base URL of the Next.js server that hosts the content-addressed
+  // WorkContract store (`/api/contracts/[hash]`). The daemon fetches the rich
+  // R/A/P/A/F from here whenever a project's on-chain `contractURI` is set.
+  // Defaults to localhost so the smoke test + local dev both work out of the
+  // box; override in production to point at the deployed Next.js host.
+  contractsBaseUrl: process.env.CHORD_CONTRACTS_BASE_URL || "http://localhost:3000",
+
   // Optional dashboard (SSE preview of agent runs, à la Open Design)
   httpPort: Number(process.env.CHORD_HTTP_PORT || 7717),
 

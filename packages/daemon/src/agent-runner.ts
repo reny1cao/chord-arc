@@ -21,6 +21,7 @@ import { createWriteStream } from "node:fs";
 import * as path from "node:path";
 import { config } from "./config.js";
 import type { DiscoveredAgent } from "./agent-discovery.js";
+import type { WorkContract } from "./work-contract.js";
 
 export interface RunAgentOpts {
   agentCli: DiscoveredAgent;
@@ -28,6 +29,14 @@ export interface RunAgentOpts {
   milestoneIndex: bigint;
   description: string;
   acceptanceCriteria?: string;
+  /**
+   * Wave-2: when the project carries an off-chain WorkContract, the daemon
+   * passes it here so the BRIEF.md gets the full R/A/P/A/F. When absent we
+   * fall back to the legacy flat-description brief.
+   */
+  contract?: WorkContract;
+  /** Wave-2: per-milestone payout in USDC base units (6 decimals). Optional — surfaced in BRIEF.md when present. */
+  amount?: bigint;
   onLog: (line: string) => void;
   /**
    * Hard cap on wall-clock runtime. Default 20 min. Beyond this the child is
@@ -46,26 +55,85 @@ export interface RunAgentResult {
   exitCode: number;
 }
 
-function briefFor(opts: Pick<RunAgentOpts, "projectId" | "milestoneIndex" | "description" | "acceptanceCriteria">): string {
-  const parts = [
-    `# Milestone ${opts.projectId.toString()}.${opts.milestoneIndex.toString()}`,
-    "",
-    "## Description",
-    "",
-    opts.description.trim(),
-  ];
-  if (opts.acceptanceCriteria && opts.acceptanceCriteria.trim().length > 0) {
-    parts.push("", "## Acceptance Criteria", "", opts.acceptanceCriteria.trim());
-  }
-  parts.push(
+/** Format a 6-decimal USDC amount for human display in BRIEF.md. */
+function formatUsdc6(amount: bigint): string {
+  if (amount < 0n) return `-${formatUsdc6(-amount)}`;
+  const whole = amount / 1_000_000n;
+  const frac = amount % 1_000_000n;
+  if (frac === 0n) return whole.toString();
+  // Trim trailing zeros on the fractional part — "5.000000" → "5", "5.250000" → "5.25"
+  const fracStr = frac.toString().padStart(6, "0").replace(/0+$/, "");
+  return `${whole.toString()}.${fracStr}`;
+}
+
+/**
+ * Render BRIEF.md for the spawned agent CLI.
+ *
+ * Wave-2: when `opts.contract` is set, we render the structured R/A/P/A/F
+ * sections from the off-chain WorkContract — the milestone description shrinks
+ * to a per-deliverable summary. When it's absent (legacy projects predating
+ * wave-2), we emit the previous flat-description format so older deployments
+ * still get a usable brief.
+ */
+function briefFor(
+  opts: Pick<RunAgentOpts, "projectId" | "milestoneIndex" | "description" | "acceptanceCriteria" | "contract" | "amount">,
+): string {
+  const header = `# Milestone ${opts.projectId.toString()}.${opts.milestoneIndex.toString()}`;
+  const tail = [
     "",
     "## Output",
     "",
     "Write all deliverable files into the `./out/` directory in this working folder.",
     "When you're satisfied with the deliverable, exit with status 0.",
     "",
-  );
-  return parts.join("\n");
+  ];
+
+  if (opts.contract) {
+    const c = opts.contract;
+    const parts: string[] = [
+      header,
+      "",
+      "# Contract",
+      "",
+      "## Result",
+      "",
+      c.result.trim(),
+      "",
+      "## Authority",
+      "",
+      c.authority.trim(),
+      "",
+      "## Proof",
+      "",
+      c.proof.trim(),
+      "",
+      "## Acceptance",
+      "",
+      c.acceptance.trim(),
+      "",
+      "## Failure",
+      "",
+      c.failure.trim(),
+      "",
+      "# This milestone",
+      "",
+      opts.description.trim() || "(no per-milestone deliverable summary supplied)",
+    ];
+    if (opts.amount !== undefined) {
+      parts.push("", "# Payout", "", `${formatUsdc6(opts.amount)} USDC`);
+    }
+    return [...parts, ...tail].join("\n");
+  }
+
+  // Legacy flat-description brief.
+  const parts = [header, "", "## Description", "", opts.description.trim()];
+  if (opts.acceptanceCriteria && opts.acceptanceCriteria.trim().length > 0) {
+    parts.push("", "## Acceptance Criteria", "", opts.acceptanceCriteria.trim());
+  }
+  if (opts.amount !== undefined) {
+    parts.push("", "## Payout", "", `${formatUsdc6(opts.amount)} USDC`);
+  }
+  return [...parts, ...tail].join("\n");
 }
 
 /**
