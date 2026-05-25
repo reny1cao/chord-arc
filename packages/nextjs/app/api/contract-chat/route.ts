@@ -126,6 +126,12 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.KIMI_API_KEY;
   if (!apiKey) {
+    if (process.env.NODE_ENV === "production") {
+      return new Response(JSON.stringify({ error: "KIMI_API_KEY is not configured for contract chat." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return stubResponse(messages, draft);
   }
 

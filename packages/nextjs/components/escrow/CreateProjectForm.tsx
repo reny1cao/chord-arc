@@ -593,7 +593,8 @@ export const CreateProjectForm = () => {
             </div>
 
             <div className="mt-4 rounded-md border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs text-base-content/75">
-              <span className="font-semibold text-primary">Heads up:</span> you&apos;ll sign 2 transactions —
+              <span className="font-semibold text-primary">Heads up:</span>{" "}
+              you&apos;ll sign 2 transactions —
               approve USDC, then create the contract. Both pay gas in USDC on Arc.
             </div>
 
