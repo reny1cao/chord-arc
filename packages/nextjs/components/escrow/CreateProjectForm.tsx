@@ -150,6 +150,21 @@ const draftsAreEqual = (a: WorkContractDraft, b: WorkContractDraft): boolean =>
   a.acceptance === b.acceptance &&
   a.failure === b.failure;
 
+const defaultMilestoneFromDraft = (draft: WorkContractDraft): MilestoneInput => {
+  const normalizedResult = draft.result.replace(/\s+/g, " ").trim();
+  const fallback = "Complete the defined work contract";
+  const description = normalizedResult || fallback;
+
+  return {
+    description:
+      description.length <= MILESTONE_DESCRIPTION_RECOMMENDED
+        ? description
+        : `${description.slice(0, MILESTONE_DESCRIPTION_RECOMMENDED - 3).trimEnd()}...`,
+    amount: "10",
+    assignee: "",
+  };
+};
+
 interface PersistedDraft {
   contractDraft: WorkContractDraft;
   milestones: MilestoneInput[];
@@ -337,6 +352,8 @@ export const CreateProjectForm = () => {
 
   const handleChatReady = useCallback((next: WorkContractDraft) => {
     setContractDraft(next);
+    setMilestones(prev => (prev.length === 0 ? [defaultMilestoneFromDraft(next)] : prev));
+    setRestoreCandidate(null);
     setStep(2);
   }, []);
 
