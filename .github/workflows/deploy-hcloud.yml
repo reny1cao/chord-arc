@@ -27,6 +27,7 @@ jobs:
           GIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           CHORD_NEXT_PORT: ${{ secrets.CHORD_NEXT_PORT || '3010' }}
           CHORD_APP_URL: ${{ secrets.CHORD_APP_URL || '' }}
+          CHORD_CADDY_DOMAIN: ${{ secrets.CHORD_CADDY_DOMAIN || 'chord.caorenyi.com' }}
           NEXT_PUBLIC_ARC_TESTNET_RPC_URL: ${{ secrets.NEXT_PUBLIC_ARC_TESTNET_RPC_URL || '' }}
           NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '' }}
           NEXT_PUBLIC_CHORD_AGENTS_REGISTRY_URL: ${{ secrets.NEXT_PUBLIC_CHORD_AGENTS_REGISTRY_URL || '' }}

@@ -7,9 +7,73 @@ BRANCH="${CHORD_BRANCH:-main}"
 GIT_SHA="${GIT_SHA:-}"
 COMPOSE_FILE="deploy/hcloud/docker-compose.yml"
 PORT="${CHORD_NEXT_PORT:-3010}"
+CADDY_DOMAIN="${CHORD_CADDY_DOMAIN:-chord.caorenyi.com}"
+CADDY_CONTAINER="${CHORD_CADDY_CONTAINER:-speech-relay-caddy-1}"
+CADDY_FILE="${CHORD_CADDY_FILE:-/etc/caddy/Caddyfile}"
 
 log() {
   printf '[chord:hcloud] %s\n' "$*"
+}
+
+configure_caddy() {
+  if [ -z "$CADDY_DOMAIN" ]; then
+    log "CHORD_CADDY_DOMAIN is empty; skipping Caddy route"
+    return
+  fi
+
+  if ! docker ps --format '{{.Names}}' | grep -Fxq "$CADDY_CONTAINER"; then
+    log "Caddy container $CADDY_CONTAINER not found; skipping Caddy route"
+    return
+  fi
+
+  local web_container web_name web_network
+  web_container="$(docker compose -f "$COMPOSE_FILE" ps -q web)"
+  if [ -z "$web_container" ]; then
+    log "web container not found; cannot configure Caddy"
+    exit 1
+  fi
+
+  web_name="$(docker inspect -f '{{.Name}}' "$web_container" | sed 's#^/##')"
+  web_network="$(docker inspect -f '{{range $name, $network := .NetworkSettings.Networks}}{{println $name}}{{end}}' "$web_container" | head -n 1)"
+  if [ -z "$web_name" ] || [ -z "$web_network" ]; then
+    log "could not resolve web container name/network for Caddy"
+    exit 1
+  fi
+
+  if ! docker inspect -f '{{json .NetworkSettings.Networks}}' "$CADDY_CONTAINER" | grep -Fq "\"$web_network\""; then
+    log "connecting $CADDY_CONTAINER to docker network $web_network"
+    docker network connect "$web_network" "$CADDY_CONTAINER"
+  fi
+
+  log "configuring Caddy route $CADDY_DOMAIN -> $web_name:3000"
+  docker exec -i -u 0 "$CADDY_CONTAINER" sh -s -- "$CADDY_DOMAIN" "$web_name" "$CADDY_FILE" <<'SCRIPT'
+set -eu
+
+domain="$1"
+upstream="$2"
+file="$3"
+tmp="$(mktemp)"
+
+awk '
+  /^# BEGIN CHORD MANAGED$/ { skip=1; next }
+  /^# END CHORD MANAGED$/ { skip=0; next }
+  skip != 1 { print }
+' "$file" > "$tmp"
+
+cat >> "$tmp" <<EOF
+
+# BEGIN CHORD MANAGED
+$domain {
+	encode zstd gzip
+	reverse_proxy $upstream:3000
+}
+# END CHORD MANAGED
+EOF
+
+mv "$tmp" "$file"
+caddy fmt --overwrite "$file"
+caddy reload --config "$file"
+SCRIPT
 }
 
 if ! command -v git >/dev/null 2>&1; then
@@ -49,6 +113,8 @@ export NEXT_PUBLIC_CHORD_NETWORK="${NEXT_PUBLIC_CHORD_NETWORK:-arc}"
 
 log "building and starting image chord-arc:$CHORD_IMAGE_TAG on port $CHORD_NEXT_PORT"
 docker compose -f "$COMPOSE_FILE" up -d --build --remove-orphans
+
+configure_caddy
 
 log "waiting for app health"
 APP_URL="${CHORD_APP_URL:-http://127.0.0.1:$CHORD_NEXT_PORT}" "$APP_DIR/deploy/hcloud/smoke.sh"
