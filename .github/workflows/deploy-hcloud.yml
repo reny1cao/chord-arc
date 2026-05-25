@@ -23,7 +23,7 @@ jobs:
       - name: Deploy
         shell: bash
         env:
-          CHORD_APP_DIR: ${{ secrets.HCLOUD_APP_DIR || '/home/dev/chord-arc' }}
+          CHORD_APP_DIR: ${{ github.workspace }}
           GIT_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
           CHORD_NEXT_PORT: ${{ secrets.CHORD_NEXT_PORT || '3010' }}
           CHORD_APP_URL: ${{ secrets.CHORD_APP_URL || '' }}
