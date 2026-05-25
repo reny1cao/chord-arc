@@ -66,7 +66,7 @@ describe("ChordEscrow", function () {
     await mockUsdc.connect(client).approve(await escrow.getAddress(), TOTAL);
     await escrow
       .connect(client)
-      .createProject(pm.address, PM_FEE_BPS, ["Design", "Build"], [M1, M2], []);
+      .createProject("", pm.address, PM_FEE_BPS, ["Design", "Build"], [M1, M2], []);
 
     return base;
   }
@@ -79,7 +79,7 @@ describe("ChordEscrow", function () {
     await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
     await escrow
       .connect(client)
-      .createProject(pm.address, PM_FEE_BPS, ["Task 1"], [M1], [worker1.address]);
+      .createProject("", pm.address, PM_FEE_BPS, ["Task 1"], [M1], [worker1.address]);
     await escrow.connect(worker1).acceptMilestone(0, 0);
 
     return base;
@@ -134,7 +134,7 @@ describe("ChordEscrow", function () {
       await mockUsdc.connect(client).approve(await escrow.getAddress(), TOTAL);
 
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, ["A", "B"], [M1, M2], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, ["A", "B"], [M1, M2], []),
       ).to.changeTokenBalances(mockUsdc, [client, escrow], [-TOTAL, TOTAL]);
     });
 
@@ -143,10 +143,10 @@ describe("ChordEscrow", function () {
       await mockUsdc.connect(client).approve(await escrow.getAddress(), TOTAL);
 
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, ["A", "B"], [M1, M2], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, ["A", "B"], [M1, M2], []),
       )
         .to.emit(escrow, "ProjectCreated")
-        .withArgs(0, client.address, pm.address, PM_FEE_BPS, TOTAL, 2);
+        .withArgs(0, client.address, pm.address, PM_FEE_BPS, TOTAL, 2, "");
     });
 
     it("Should increment projectCount and store project state", async function () {
@@ -169,6 +169,7 @@ describe("ChordEscrow", function () {
       const tx = escrow
         .connect(client)
         .createProject(
+          "",
           pm.address,
           PM_FEE_BPS,
           ["A", "B"],
@@ -193,7 +194,7 @@ describe("ChordEscrow", function () {
     it("Should allow project with no PM (pmFeeBps must be 0)", async function () {
       const { client, mockUsdc, escrow } = await loadFixture(deployFixture);
       await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
-      await escrow.connect(client).createProject(ethers.ZeroAddress, 0, ["Solo"], [M1], []);
+      await escrow.connect(client).createProject("", ethers.ZeroAddress, 0, ["Solo"], [M1], []);
 
       const project = await escrow.getProject(0);
       expect(project.pm).to.equal(ethers.ZeroAddress);
@@ -210,7 +211,7 @@ describe("ChordEscrow", function () {
       const { client, pm, escrow } = await loadFixture(deployFixture);
       // OZ v5 SafeERC20 wraps the underlying ERC20InsufficientAllowance custom error.
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, ["A"], [M1], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, ["A"], [M1], []),
       ).to.be.reverted;
     });
 
@@ -218,7 +219,7 @@ describe("ChordEscrow", function () {
       const { client, pm, mockUsdc, escrow } = await loadFixture(deployFixture);
       await mockUsdc.connect(client).approve(await escrow.getAddress(), M1 - 1n);
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, ["A"], [M1], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, ["A"], [M1], []),
       ).to.be.reverted;
     });
 
@@ -226,7 +227,7 @@ describe("ChordEscrow", function () {
       const { client, pm, mockUsdc, escrow } = await loadFixture(deployFixture);
       await mockUsdc.connect(client).approve(await escrow.getAddress(), TOTAL);
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, ["A", "B"], [M1], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, ["A", "B"], [M1], []),
       ).to.be.revertedWith("Array length mismatch");
     });
 
@@ -236,7 +237,7 @@ describe("ChordEscrow", function () {
       await expect(
         escrow
           .connect(client)
-          .createProject(pm.address, PM_FEE_BPS, ["A", "B"], [M1, M2], [worker1.address]),
+          .createProject("", pm.address, PM_FEE_BPS, ["A", "B"], [M1, M2], [worker1.address]),
       ).to.be.revertedWith("Assignees array length mismatch");
     });
 
@@ -244,7 +245,7 @@ describe("ChordEscrow", function () {
       const { client, pm, mockUsdc, escrow } = await loadFixture(deployFixture);
       await mockUsdc.connect(client).approve(await escrow.getAddress(), TOTAL);
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, [], [], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, [], [], []),
       ).to.be.revertedWith("Need at least one milestone");
     });
 
@@ -253,7 +254,7 @@ describe("ChordEscrow", function () {
       const tiny = usdc(1) - 1n; // 0.999999 USDC — one wei under min
       await mockUsdc.connect(client).approve(await escrow.getAddress(), tiny);
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, ["A"], [tiny], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, ["A"], [tiny], []),
       ).to.be.revertedWith("Amount too small");
     });
 
@@ -261,7 +262,7 @@ describe("ChordEscrow", function () {
       const { client, pm, mockUsdc, escrow } = await loadFixture(deployFixture);
       await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
       await expect(
-        escrow.connect(client).createProject(pm.address, 2001, ["A"], [M1], []),
+        escrow.connect(client).createProject("", pm.address, 2001, ["A"], [M1], []),
       ).to.be.revertedWith("PM fee too high");
     });
 
@@ -269,7 +270,7 @@ describe("ChordEscrow", function () {
       const { client, mockUsdc, escrow } = await loadFixture(deployFixture);
       await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
       await expect(
-        escrow.connect(client).createProject(client.address, PM_FEE_BPS, ["A"], [M1], []),
+        escrow.connect(client).createProject("", client.address, PM_FEE_BPS, ["A"], [M1], []),
       ).to.be.revertedWith("Client cannot be PM");
     });
 
@@ -279,7 +280,7 @@ describe("ChordEscrow", function () {
       await expect(
         escrow
           .connect(client)
-          .createProject(pm.address, PM_FEE_BPS, ["A"], [M1], [client.address]),
+          .createProject("", pm.address, PM_FEE_BPS, ["A"], [M1], [client.address]),
       ).to.be.revertedWith("Client cannot be assignee");
     });
 
@@ -289,7 +290,7 @@ describe("ChordEscrow", function () {
       await expect(
         escrow
           .connect(client)
-          .createProject(pm.address, PM_FEE_BPS, ["A"], [M1], [pm.address]),
+          .createProject("", pm.address, PM_FEE_BPS, ["A"], [M1], [pm.address]),
       ).to.be.revertedWith("PM cannot be assignee");
     });
 
@@ -297,7 +298,7 @@ describe("ChordEscrow", function () {
       const { client, pm, mockUsdc, escrow } = await loadFixture(deployFixture);
       await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, [""], [M1], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, [""], [M1], []),
       ).to.be.revertedWith("Description required");
     });
 
@@ -306,7 +307,7 @@ describe("ChordEscrow", function () {
       await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
       const tooLong = "x".repeat(501);
       await expect(
-        escrow.connect(client).createProject(pm.address, PM_FEE_BPS, [tooLong], [M1], []),
+        escrow.connect(client).createProject("", pm.address, PM_FEE_BPS, [tooLong], [M1], []),
       ).to.be.revertedWith("Description too long");
     });
 
@@ -316,8 +317,31 @@ describe("ChordEscrow", function () {
       await expect(
         escrow
           .connect(client)
-          .createProject(ethers.ZeroAddress, PM_FEE_BPS, ["A"], [M1], []),
+          .createProject("", ethers.ZeroAddress, PM_FEE_BPS, ["A"], [M1], []),
       ).to.be.revertedWith("Cannot set fee without PM");
+    });
+
+    it("Should revert when contractURI > 256 bytes", async function () {
+      const { client, pm, mockUsdc, escrow } = await loadFixture(deployFixture);
+      await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
+      const tooLongURI = "x".repeat(257);
+      await expect(
+        escrow.connect(client).createProject(tooLongURI, pm.address, PM_FEE_BPS, ["A"], [M1], []),
+      ).to.be.revertedWith("URI too long");
+    });
+
+    it("Should accept and store a valid contractURI", async function () {
+      const { client, pm, mockUsdc, escrow } = await loadFixture(deployFixture);
+      await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
+      const uri = "chord://" + "a".repeat(64);
+      await expect(
+        escrow.connect(client).createProject(uri, pm.address, PM_FEE_BPS, ["A"], [M1], []),
+      )
+        .to.emit(escrow, "ProjectCreated")
+        .withArgs(0, client.address, pm.address, PM_FEE_BPS, M1, 1, uri);
+
+      const project = await escrow.getProject(0);
+      expect(project.contractURI).to.equal(uri);
     });
   });
 
@@ -519,7 +543,7 @@ describe("ChordEscrow", function () {
       await mockUsdc.connect(client).approve(await escrow.getAddress(), M1);
       await escrow
         .connect(client)
-        .createProject(ethers.ZeroAddress, 0, ["Solo"], [M1], [worker1.address]);
+        .createProject("", ethers.ZeroAddress, 0, ["Solo"], [M1], [worker1.address]);
       await escrow.connect(worker1).acceptMilestone(0, 0);
       await escrow.connect(worker1).submitMilestone(0, 0, "done");
 
@@ -746,6 +770,7 @@ describe("ChordEscrow", function () {
       await escrow
         .connect(client)
         .createProject(
+          "",
           pm.address,
           PM_FEE_BPS,
           ["A", "B"],
@@ -787,6 +812,7 @@ describe("ChordEscrow", function () {
       await escrow
         .connect(client)
         .createProject(
+          "",
           pm.address,
           PM_FEE_BPS,
           ["Design", "Build"],

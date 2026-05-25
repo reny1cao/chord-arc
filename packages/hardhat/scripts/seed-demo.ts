@@ -126,7 +126,7 @@ async function main() {
     console.log(
       `[seed] project ${i}: ${p.milestones.length} milestone(s), ${p.milestones.reduce((a, m) => a + m.amountUsdc, 0)} USDC`,
     );
-    const tx = await escrow.createProject(p.pm, p.pmFeeBps, descriptions, amounts, assignees);
+    const tx = await escrow.createProject("", p.pm, p.pmFeeBps, descriptions, amounts, assignees);
     const receipt = await tx.wait();
     console.log(`  tx: ${tx.hash}  (block ${receipt?.blockNumber})`);
   }

@@ -48,6 +48,7 @@ contract ChordEscrow is ReentrancyGuard {
         uint256 totalPaid;
         uint256 totalPmFees;
         bool active;
+        string contractURI;
         Milestone[] milestones;
     }
 
@@ -68,7 +69,8 @@ contract ChordEscrow is ReentrancyGuard {
         address pm,
         uint256 pmFeeBps,
         uint256 totalAmount,
-        uint256 milestoneCount
+        uint256 milestoneCount,
+        string contractURI
     );
 
     event MilestoneAssigned(
@@ -126,12 +128,14 @@ contract ChordEscrow is ReentrancyGuard {
      * @notice Create a project funded with USDC. Caller must `approve` this contract for `total` first.
      */
     function createProject(
+        string memory contractURI,
         address pm,
         uint256 pmFeeBps,
         string[] memory descriptions,
         uint256[] memory amounts,
         address[] memory initialAssignees
     ) external returns (uint256) {
+        require(bytes(contractURI).length <= 256, "URI too long");
         require(descriptions.length == amounts.length, "Array length mismatch");
         require(descriptions.length > 0, "Need at least one milestone");
         require(descriptions.length <= 50, "Too many milestones");
@@ -171,6 +175,9 @@ contract ChordEscrow is ReentrancyGuard {
         project.pmFeeBps = pmFeeBps;
         project.totalAmount = total;
         project.active = true;
+        project.contractURI = contractURI;
+
+        _emitProjectCreated(projectId, pm, pmFeeBps, total, descriptions.length, contractURI);
 
         for (uint256 i = 0; i < descriptions.length; i++) {
             address assignee = initialAssignees.length > 0 ? initialAssignees[i] : address(0);
@@ -197,8 +204,20 @@ contract ChordEscrow is ReentrancyGuard {
             }
         }
 
-        emit ProjectCreated(projectId, msg.sender, pm, pmFeeBps, total, descriptions.length);
         return projectId;
+    }
+
+    /// @dev Isolated to keep `createProject`'s local frame shallow enough for the
+    ///      non-via-IR Solidity stack limit.
+    function _emitProjectCreated(
+        uint256 projectId,
+        address pm,
+        uint256 pmFeeBps,
+        uint256 total,
+        uint256 milestoneCount,
+        string memory contractURI
+    ) internal {
+        emit ProjectCreated(projectId, msg.sender, pm, pmFeeBps, total, milestoneCount, contractURI);
     }
 
     // ============ Assignment ============
@@ -483,7 +502,8 @@ contract ChordEscrow is ReentrancyGuard {
             uint256 totalPaid,
             uint256 totalPmFees,
             bool active,
-            uint256 milestoneCount
+            uint256 milestoneCount,
+            string memory contractURI
         )
     {
         Project storage project = projects[projectId];
@@ -495,7 +515,8 @@ contract ChordEscrow is ReentrancyGuard {
             project.totalPaid,
             project.totalPmFees,
             project.active,
-            project.milestones.length
+            project.milestones.length,
+            project.contractURI
         );
     }
 
