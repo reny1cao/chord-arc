@@ -27,7 +27,7 @@ A single address can play multiple roles across different projects.
 
 ## 2. On-chain interface
 
-Canonical deployment on Arc Testnet: `0xa07e0229acAd5B3a1643a88474Dec913F9904a14` (USDC at `0x3600000000000000000000000000000000000000`).
+Canonical deployment on Arc Testnet: `0x331994d88f069538532a8de0dc08e938eb9af6b5` (USDC at `0x3600000000000000000000000000000000000000`).
 
 All amounts are in USDC base units (6 decimals). All `projectId` and `milestoneIndex` values are `uint256`.
 

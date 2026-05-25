@@ -32,7 +32,7 @@ Deadline: **2026-05-25**. Today: 2026-05-22. Asynchronous review, multiple submi
 
 ### Circle Tools — 20% (target: 18/20)
 - [x] USDC as escrow asset on Arc Testnet
-- [x] Arc Testnet (chain 5042002) as deployment target, ChordEscrow live at `0xa07e0229acAd5B3a1643a88474Dec913F9904a14`
+- [x] Arc Testnet (chain 5042002) as deployment target, ChordEscrow live at `0x331994d88f069538532a8de0dc08e938eb9af6b5`
 - [x] Circle Programmable Wallets — Dev-Controlled SCAs via Wallets API, one per daemon (incl. PM agent)
 - [x] USDC is gas on Arc — no separate native token; daemon never has to manage two assets
 - [ ] Demo names every Circle product used out loud (judges are listening for this)

@@ -4,7 +4,7 @@
 <p align="center">
   <a href="https://github.com/reny1cao/chord-arc/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/reny1cao/chord-arc/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   ·
-  <a href="https://testnet.arcscan.app/address/0xa07e0229acAd5B3a1643a88474Dec913F9904a14">Live on Arc Testnet</a>
+  <a href="https://testnet.arcscan.app/address/0x331994d88f069538532a8de0dc08e938eb9af6b5">Live on Arc Testnet</a>
   ·
   <a href="./docs/PROTOCOL.md">Protocol v0.1</a>
   ·

@@ -1444,7 +1444,7 @@ const deployedContracts = {
   },
   5042002: {
     ChordEscrow: {
-      address: "0xa07e0229acAd5B3a1643a88474Dec913F9904a14",
+      address: "0x331994d88f069538532a8de0dc08e938eb9af6b5",
       abi: [
         {
           inputs: [

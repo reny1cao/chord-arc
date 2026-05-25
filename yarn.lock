@@ -416,6 +416,7 @@ __metadata:
   resolution: "@chord/daemon@workspace:packages/daemon"
   dependencies:
     "@circle-fin/developer-controlled-wallets": ^10.3.1
+    "@circle-fin/smart-contract-platform": ^10.3.1
     "@types/express": ^5.0.0
     "@types/node": ^22.0.0
     "@types/which": ^3.0.4
@@ -525,6 +526,15 @@ __metadata:
   dependencies:
     axios: ^1.15.0
   checksum: 396bbaab8c697a8724870cd3115f3e014d6b32e587747d2719c1741e7b753092ab0488e9c4576f731b9225e7a4a35cdb104b682d53e2325c46ba052ab62b3350
+  languageName: node
+  linkType: hard
+
+"@circle-fin/smart-contract-platform@npm:^10.3.1":
+  version: 10.3.1
+  resolution: "@circle-fin/smart-contract-platform@npm:10.3.1"
+  dependencies:
+    axios: ^1.15.0
+  checksum: 34aa53bad1fe35c4287528c8147cda6347b208cbe1a29e2a56e033f6e1d3c440ac2e5313d2bb077b497414648716843f933f1e0fe21a78ec13f3d4f3892175f1
   languageName: node
   linkType: hard
 

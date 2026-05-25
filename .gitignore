@@ -46,3 +46,6 @@ packages/hardhat/coverage.json
 
 # local smoke-test artifacts
 .screenshots/
+
+# firecrawl scrape caches (local docs research)
+.firecrawl/

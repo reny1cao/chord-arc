@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@circle-fin/developer-controlled-wallets": "^10.3.1",
+    "@circle-fin/smart-contract-platform": "^10.3.1",
     "abitype": "^1.0.7",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
