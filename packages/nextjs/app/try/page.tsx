@@ -241,7 +241,8 @@ const TryPage = () => {
         data: encodeFunctionData({
           abi: ESCROW_ABI,
           functionName: "createProject",
-          args: [ZERO_ADDRESS, 0n, [brief], [amount], initialAssignees],
+          // contractURI is "" — the /try path doesn't use off-chain WorkContracts.
+          args: ["", ZERO_ADDRESS, 0n, [brief], [amount], initialAssignees],
         }),
       });
       await publicClient.waitForTransactionReceipt({ hash: createHash });
