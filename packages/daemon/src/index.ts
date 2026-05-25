@@ -3,8 +3,9 @@ import type { Address, Hex } from "viem";
 
 import { discoverAgentCli } from "./agent-discovery.js";
 import { runAgentForMilestone } from "./agent-runner.js";
-import { readMilestone, watchMilestoneAssigned } from "./chain.js";
+import { readMilestone, readProject, watchMilestoneAssigned } from "./chain.js";
 import { runPmAgent } from "./pm-agent.js";
+import { fetchAndVerifyContract, type WorkContract } from "./work-contract.js";
 import {
   createCircleClient,
   getWalletAddress as getCircleAddress,
@@ -101,11 +102,41 @@ async function handleAssignment(args: {
 
     // fetch brief + spawn agent
     const milestone = await readMilestone({ escrowAddress: escrow, projectId, milestoneIndex });
+
+    // Wave-2: resolve the off-chain WorkContract if the project carries one.
+    // We pull the URI from the project tuple (not the event) so reorgs and
+    // mid-flight URI updates can't desync. Empty string == legacy project.
+    let contract: WorkContract | undefined;
+    try {
+      const project = await readProject({ escrowAddress: escrow, projectId });
+      if (project.contractURI && project.contractURI.length > 0) {
+        const fetched = await fetchAndVerifyContract({
+          uri: project.contractURI,
+          baseUrl: config.contractsBaseUrl,
+        });
+        contract = fetched.contract;
+        emit("contract-fetched", {
+          key,
+          uri: project.contractURI,
+          hash: fetched.hash,
+          bytes: fetched.bytes,
+        });
+      }
+    } catch (err) {
+      // Fail-soft: if the off-chain fetch breaks (server down, hash mismatch,
+      // etc.) we still want to attempt the work. Surface the warning and fall
+      // through to the legacy flat-description brief.
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[chord] contract fetch failed for ${key}: ${msg}`);
+      emit("contract-fetch-failed", { key, error: msg });
+    }
+
     state.patchRun(key, { phase: "running" });
     emit("agent-starting", {
       key,
       description: milestone.description,
       amount: milestone.amount.toString(),
+      hasContract: contract !== undefined,
     });
 
     const result = await runAgentForMilestone({
@@ -113,6 +144,8 @@ async function handleAssignment(args: {
       projectId,
       milestoneIndex,
       description: milestone.description,
+      contract,
+      amount: milestone.amount,
       onLog: line => emit("agent-log", { key, line }),
     });
     state.patchRun(key, {

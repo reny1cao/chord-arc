@@ -35,6 +35,9 @@ export const chordEscrowAbi = [
       { name: "pmFeeBps", type: "uint256", indexed: false },
       { name: "totalAmount", type: "uint256", indexed: false },
       { name: "milestoneCount", type: "uint256", indexed: false },
+      // Wave-2: off-chain WorkContract pointer. Empty string == legacy project
+      // with R/A/P/A/F (if any) flattened into the milestone descriptions.
+      { name: "contractURI", type: "string", indexed: false },
     ],
     anonymous: false,
   },
@@ -114,6 +117,27 @@ export const chordEscrowAbi = [
       { name: "createdAt", type: "uint256" },
       { name: "submittedAt", type: "uint256" },
       { name: "submissionNote", type: "string" },
+    ],
+  },
+
+  // ---- view the daemon reads to pick up the project's off-chain contract pointer ----
+  // Mirrors ChordEscrow.getProject exactly — 9 fields, with the wave-1 `contractURI`
+  // appended at the tail. Order must match the contract or viem will misdecode.
+  {
+    type: "function",
+    name: "getProject",
+    stateMutability: "view",
+    inputs: [{ name: "projectId", type: "uint256" }],
+    outputs: [
+      { name: "client", type: "address" },
+      { name: "pm", type: "address" },
+      { name: "pmFeeBps", type: "uint256" },
+      { name: "totalAmount", type: "uint256" },
+      { name: "totalPaid", type: "uint256" },
+      { name: "totalPmFees", type: "uint256" },
+      { name: "active", type: "bool" },
+      { name: "milestoneCount", type: "uint256" },
+      { name: "contractURI", type: "string" },
     ],
   },
 ] as const;
