@@ -1,55 +1,73 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+/**
+ * CreateProjectForm — chat-first contract creation flow.
+ *
+ * Wave 2 rewrite: splits the legacy flat-description path into an off-chain
+ * WorkContract (persisted via /api/contracts) + short on-chain deliverable
+ * summaries. The R/A/P/A/F sections never go on chain — only the resulting
+ * contractURI does.
+ *
+ * Step 1: chat-first contract definition via <ContractChat />.
+ * Step 2: milestones + collapsed routing config (PM address + fee).
+ * Step 3: fund + create (POST contract -> approve -> createProject).
+ *
+ * Drafts (contract, milestones, pm) autosave to localStorage and restore on
+ * mount with a banner. Cleared after a successful on-chain create.
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AIMilestoneSplitter } from "./AIMilestoneSplitter";
+import { ContractChat } from "./ContractChat";
 import { formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth/useDeployedContractInfo";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth/useScaffoldWriteContract";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useChordUsdcAddress } from "~~/hooks/useChordUsdcAddress";
+import {
+  type ContractStorageResponse,
+  EMPTY_WORK_CONTRACT_DRAFT,
+  MILESTONE_DESCRIPTION_MAX,
+  MILESTONE_DESCRIPTION_RECOMMENDED,
+  type WorkContractDraft,
+  canonicalize,
+  toWorkContract,
+} from "~~/types/contract";
 import { getTransactionUrl, isArcNetwork } from "~~/utils/chordNetwork";
+import { isDraftComplete } from "~~/utils/contractChat";
 import { ERC20_ABI, USDC_DECIMALS } from "~~/utils/erc20";
 import type { MilestoneSuggestion } from "~~/utils/mockAI";
 import { notification } from "~~/utils/scaffold-eth";
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+const DRAFT_STORAGE_KEY = "chord:create-project-draft:v1";
+
 interface MilestoneInput {
   description: string;
   amount: string;
-  assignee: string; // Optional initial assignee
+  assignee: string;
 }
 
-interface WorkContractDraft {
-  result: string;
-  authority: string;
-  proof: string;
-  acceptance: string;
-  failure: string;
-  amount: string;
-}
-
-interface WorkContractTemplate {
+interface ContractTemplate {
   name: string;
-  description: string;
+  blurb: string;
   draft: WorkContractDraft;
+  milestone: MilestoneInput;
 }
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
-
-const EMPTY_CONTRACT_DRAFT: WorkContractDraft = {
-  result: "",
-  authority: "",
-  proof: "",
-  acceptance: "",
-  failure: "",
-  amount: "10",
-};
-
-const CONTRACT_TEMPLATES: WorkContractTemplate[] = [
+/**
+ * Templates seed both the chat-driven WorkContractDraft and a single short
+ * milestone. The long R/A/P/A/F text is the same as the legacy form so
+ * existing copy carries over; the milestone description is now a tight
+ * deliverable summary (<= 100 chars) per the new schema.
+ */
+const CONTRACT_TEMPLATES: ContractTemplate[] = [
   {
     name: "Market research brief",
-    description: "A sourced brief that a user can review manually before payout.",
+    blurb: "A sourced brief that a user can review manually before payout.",
     draft: {
       result:
         "Research one narrowly-scoped market and deliver a concise evidence brief with the strongest signals, counter-signals, and a final recommendation.",
@@ -61,12 +79,16 @@ const CONTRACT_TEMPLATES: WorkContractTemplate[] = [
         "At least five relevant sources are cited; claims are traceable to sources; uncertainty is explicit; the recommendation follows from the evidence.",
       failure:
         "Fabricated sources, missing evidence, or unsupported recommendations should be rejected or sent back for revision.",
+    },
+    milestone: {
+      description: "Sourced evidence brief on the selected market",
       amount: "10",
+      assignee: "",
     },
   },
   {
     name: "B2B leads",
-    description: "A classic paid work unit with clear rows, sources, and acceptance rules.",
+    blurb: "A classic paid work unit with clear rows, sources, and acceptance rules.",
     draft: {
       result:
         "Deliver 30 B2B sales leads matching the supplied ICP. Each lead must include company, website, contact, role, source link, and fit rationale.",
@@ -78,36 +100,34 @@ const CONTRACT_TEMPLATES: WorkContractTemplate[] = [
         "At least 30 rows are delivered; at least 24 match the ICP; every row has a reachable source; obvious duplicates or fabricated contacts fail.",
       failure:
         "15-23 valid leads require revision. Fewer than 15 valid leads, fabricated data, or missing sources can be rejected.",
+    },
+    milestone: {
+      description: "30 qualified B2B leads (CSV + sources)",
       amount: "50",
+      assignee: "",
     },
   },
   {
     name: "Competitor monitor",
-    description: "A repeatable research deliverable with low external-action risk.",
+    blurb: "A repeatable research deliverable with low external-action risk.",
     draft: {
       result:
         "Produce a competitor update for three named companies, covering product changes, pricing shifts, hiring signals, and notable customer/news events.",
       authority:
         "May read public websites, docs, changelogs, job posts, social posts, and news. Must not log into accounts or contact anyone.",
-      proof: "Provide source links for every claim, a change log grouped by competitor, and a short impact assessment.",
+      proof:
+        "Provide source links for every claim, a change log grouped by competitor, and a short impact assessment.",
       acceptance:
         "Every company has at least three concrete observations; each observation has a source; impact notes are specific and non-generic.",
       failure: "Missing sources, stale findings, or generic summaries without concrete changes should be revised.",
+    },
+    milestone: {
+      description: "Quarterly competitor update for 3 named companies",
       amount: "15",
+      assignee: "",
     },
   },
 ];
-
-const buildContractDescription = (draft: WorkContractDraft) =>
-  [
-    ["Result", draft.result],
-    ["Authority", draft.authority],
-    ["Proof", draft.proof],
-    ["Acceptance", draft.acceptance],
-    ["Failure", draft.failure],
-  ]
-    .map(([label, value]) => `${label}:\n${value.trim()}`)
-    .join("\n\n");
 
 /** Safe parse — returns 0n on bad input so we never crash on partially-typed amounts. */
 const safeParseUsdc = (raw: string): bigint => {
@@ -121,6 +141,49 @@ const safeParseUsdc = (raw: string): bigint => {
 
 const shortAddress = (address: string) => `${address.slice(0, 6)}...${address.slice(-4)}`;
 
+const draftsAreEqual = (a: WorkContractDraft, b: WorkContractDraft): boolean =>
+  a.result === b.result &&
+  a.authority === b.authority &&
+  a.proof === b.proof &&
+  a.acceptance === b.acceptance &&
+  a.failure === b.failure;
+
+interface PersistedDraft {
+  contractDraft: WorkContractDraft;
+  milestones: MilestoneInput[];
+  pmAddress: string;
+  pmFeeBps: string;
+  step: number;
+}
+
+const isPersistedDraft = (value: unknown): value is PersistedDraft => {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  if (!v.contractDraft || typeof v.contractDraft !== "object") return false;
+  const cd = v.contractDraft as Record<string, unknown>;
+  for (const key of ["result", "authority", "proof", "acceptance", "failure"]) {
+    if (typeof cd[key] !== "string") return false;
+  }
+  if (!Array.isArray(v.milestones)) return false;
+  if (typeof v.pmAddress !== "string") return false;
+  if (typeof v.pmFeeBps !== "string") return false;
+  return true;
+};
+
+const isMeaningfulDraft = (persisted: PersistedDraft): boolean => {
+  if (!draftsAreEqual(persisted.contractDraft, EMPTY_WORK_CONTRACT_DRAFT)) return true;
+  if (persisted.milestones.length > 0) return true;
+  if (persisted.pmAddress.trim()) return true;
+  return false;
+};
+
+interface CachedContractURI {
+  uri: `chord://${string}`;
+  hash: string;
+  /** Canonicalized JSON of the WorkContract used to derive the URI. */
+  key: string;
+}
+
 export const CreateProjectForm = () => {
   const router = useRouter();
   const { address: connectedAddress } = useAccount();
@@ -128,13 +191,24 @@ export const CreateProjectForm = () => {
   const isArc = isArcNetwork(targetNetwork.id);
 
   const [step, setStep] = useState(1);
-  const [contractDraft, setContractDraft] = useState<WorkContractDraft>(EMPTY_CONTRACT_DRAFT);
+  const [contractDraft, setContractDraft] = useState<WorkContractDraft>(EMPTY_WORK_CONTRACT_DRAFT);
   const [milestones, setMilestones] = useState<MilestoneInput[]>([]);
   const [pmAddress, setPmAddress] = useState("");
   const [pmFeeBps, setPmFeeBps] = useState("500"); // 5% default
-  const [showAssignees, setShowAssignees] = useState(false);
   const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | null>(null);
   const [createTxHash, setCreateTxHash] = useState<`0x${string}` | null>(null);
+  const [cachedURI, setCachedURI] = useState<CachedContractURI | null>(null);
+  const [isPersisting, setIsPersisting] = useState(false);
+  const [routingExpanded, setRoutingExpanded] = useState(false);
+  const [splitterExpanded, setSplitterExpanded] = useState(false);
+
+  // Restore-from-draft banner state.
+  const [restoreCandidate, setRestoreCandidate] = useState<PersistedDraft | null>(null);
+  const [hasRestoredCheck, setHasRestoredCheck] = useState(false);
+
+  // Bump to force-remount ContractChat when a template is selected, so its
+  // internal useChat picks up the new initialDraft + greeting.
+  const [chatResetKey, setChatResetKey] = useState(0);
 
   // Resolve the deployed ChordEscrow address from the SE-2 registry.
   const { data: escrowContract } = useDeployedContractInfo({ contractName: "ChordEscrow" });
@@ -145,14 +219,12 @@ export const CreateProjectForm = () => {
     escrowAddress,
   });
 
-  // Total amount in USDC base units (6 decimals).
   const totalUsdc = useMemo(
     () => milestones.reduce<bigint>((sum, m) => sum + safeParseUsdc(m.amount), 0n),
     [milestones],
   );
   const totalUsdcDisplay = useMemo(() => formatUnits(totalUsdc, USDC_DECIMALS), [totalUsdc]);
 
-  // Read current USDC allowance for the escrow.
   const {
     data: allowance,
     refetch: refetchAllowance,
@@ -173,15 +245,11 @@ export const CreateProjectForm = () => {
     query: { enabled: Boolean(connectedAddress && usdcAddress) },
   });
 
-  // Wagmi writers — one for the ERC-20 approve, one (via SE-2) for createProject.
   const { writeContractAsync: writeApprove, isPending: isApproving } = useWriteContract();
   const { writeContractAsync: writeEscrow, isMining: isCreating } = useScaffoldWriteContract({
     contractName: "ChordEscrow",
   });
 
-  // Wait for the approval receipt before refetching allowance — wagmi's
-  // writeContractAsync resolves on submission, not inclusion, so without this
-  // the UI would sit on the stale allowance for up to one polling interval.
   const { data: approveReceipt, isLoading: isApproveMining } = useWaitForTransactionReceipt({
     hash: approveTxHash ?? undefined,
     query: { enabled: Boolean(approveTxHash) },
@@ -197,68 +265,191 @@ export const CreateProjectForm = () => {
   const balanceSufficient = (usdcBalance ?? 0n) >= totalUsdc && totalUsdc > 0n;
   const approvePending = isApproving || isApproveMining;
 
-  const pmFeePercent = parseInt(pmFeeBps) / 100;
+  const pmFeePercent = parseInt(pmFeeBps || "0") / 100;
+  const draftComplete = isDraftComplete(contractDraft);
 
-  const handleSuggestionsGenerated = (suggestions: MilestoneSuggestion[]) => {
+  // -------- Autosave: load on mount --------
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) {
+        setHasRestoredCheck(true);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (isPersistedDraft(parsed) && isMeaningfulDraft(parsed)) {
+        setRestoreCandidate(parsed);
+      }
+    } catch (err) {
+      console.warn("[create] failed to read autosave", err);
+    } finally {
+      setHasRestoredCheck(true);
+    }
+  }, []);
+
+  // -------- Autosave: persist on every change (after restore check) --------
+  useEffect(() => {
+    if (!hasRestoredCheck) return;
+    if (typeof window === "undefined") return;
+    const snapshot: PersistedDraft = { contractDraft, milestones, pmAddress, pmFeeBps, step };
+    try {
+      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(snapshot));
+    } catch (err) {
+      // Quota errors are rare for this size; logging only.
+      console.warn("[create] failed to write autosave", err);
+    }
+  }, [contractDraft, milestones, pmAddress, pmFeeBps, step, hasRestoredCheck]);
+
+  const clearAutosave = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch (err) {
+      console.warn("[create] failed to clear autosave", err);
+    }
+  }, []);
+
+  const handleRestore = useCallback(() => {
+    if (!restoreCandidate) return;
+    setContractDraft(restoreCandidate.contractDraft);
+    setMilestones(restoreCandidate.milestones);
+    setPmAddress(restoreCandidate.pmAddress);
+    setPmFeeBps(restoreCandidate.pmFeeBps);
+    setStep(restoreCandidate.step || 1);
+    setChatResetKey(k => k + 1);
+    setRestoreCandidate(null);
+  }, [restoreCandidate]);
+
+  const handleDiscardRestore = useCallback(() => {
+    setRestoreCandidate(null);
+    clearAutosave();
+  }, [clearAutosave]);
+
+  // -------- ContractChat plumbing --------
+  // ContractChat owns its own draft state internally. We mirror it back here
+  // via onDraftChange so persistence and step-2 gating see the latest values.
+  const handleChatDraftChange = useCallback((next: WorkContractDraft) => {
+    setContractDraft(prev => (draftsAreEqual(prev, next) ? prev : next));
+  }, []);
+
+  const handleChatReady = useCallback((next: WorkContractDraft) => {
+    setContractDraft(next);
+    setStep(2);
+  }, []);
+
+  const handlePickTemplate = useCallback((template: ContractTemplate) => {
+    setContractDraft(template.draft);
+    setMilestones(prev => (prev.length === 0 ? [template.milestone] : prev));
+    setChatResetKey(k => k + 1);
+    notification.info(`Loaded "${template.name}" — review and refine in chat`);
+  }, []);
+
+  const handleSuggestionsGenerated = useCallback((suggestions: MilestoneSuggestion[]) => {
+    // The AI splitter still emits R/A/P/A/F-flavored acceptance text. With the
+    // new schema that text belongs in the off-chain contract, NOT in the
+    // per-milestone description (which has a 200-char recommended cap). For
+    // simplicity we drop the acceptance footer here — users tighten the
+    // description and refine R/A/P/A/F in chat.
     setMilestones(
       suggestions.map(s => ({
-        description: s.acceptance
-          ? `${s.description}\n\nAcceptance:\n- ${s.acceptance.replace(/ \/ /g, "\n- ")}`
-          : s.description,
+        description: s.description.slice(0, MILESTONE_DESCRIPTION_RECOMMENDED),
         amount: s.amount,
         assignee: "",
       })),
     );
+    setSplitterExpanded(false);
     setStep(2);
-  };
+  }, []);
 
-  const handleContractDraftChange = (field: keyof WorkContractDraft, value: string) => {
-    setContractDraft(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleUseContractDraft = () => {
-    if (!contractDraft.result.trim() || !contractDraft.proof.trim() || !contractDraft.acceptance.trim()) {
-      notification.error("Define the result, proof, and acceptance criteria before funding");
-      return;
-    }
-    if (safeParseUsdc(contractDraft.amount) <= 0n) {
-      notification.error("Payout must be greater than zero");
-      return;
-    }
-    setMilestones([
-      {
-        description: buildContractDescription(contractDraft),
-        amount: contractDraft.amount,
-        assignee: "",
-      },
-    ]);
-    setShowAssignees(false);
-    setStep(2);
-  };
-
+  // -------- Milestone editing --------
   const handleAddMilestone = () => {
-    setMilestones([...milestones, { description: "", amount: "10", assignee: "" }]);
+    setMilestones(prev => [...prev, { description: "", amount: "10", assignee: "" }]);
   };
 
   const handleRemoveMilestone = (index: number) => {
-    setMilestones(milestones.filter((_, i) => i !== index));
+    setMilestones(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleMilestoneChange = (index: number, field: keyof MilestoneInput, value: string) => {
-    const updated = [...milestones];
-    updated[index] = { ...updated[index], [field]: value };
-    setMilestones(updated);
+    setMilestones(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
   };
 
-  const isValidForm = () => {
-    if (pmAddress && !isAddress(pmAddress)) return false;
+  const isMilestonesValid = useMemo(() => {
     if (milestones.length === 0) return false;
-    if (milestones.some(m => !m.description.trim() || safeParseUsdc(m.amount) <= 0n)) return false;
-    if (milestones.some(m => m.assignee && !isAddress(m.assignee))) return false;
-    return true;
-  };
+    return milestones.every(
+      m =>
+        m.description.trim().length > 0 &&
+        m.description.length <= MILESTONE_DESCRIPTION_MAX &&
+        safeParseUsdc(m.amount) > 0n &&
+        (!m.assignee || isAddress(m.assignee)),
+    );
+  }, [milestones]);
+
+  const isPmValid = !pmAddress || isAddress(pmAddress);
+  const isValidForm = () => draftComplete && isMilestonesValid && isPmValid;
 
   const txLink = (hash: `0x${string}`) => getTransactionUrl(targetNetwork.id, hash);
+
+  // -------- POST contract -> cache -> approve -> create --------
+
+  /**
+   * Persist the current WorkContractDraft to /api/contracts, caching the
+   * resulting URI by canonicalized JSON. Re-POST only when the draft has
+   * actually changed since the last cached result.
+   */
+  const persistContract = useCallback(async (): Promise<CachedContractURI | null> => {
+    if (!draftComplete) {
+      notification.error("Finish the work contract (all 5 fields) before funding");
+      return null;
+    }
+    const contract = toWorkContract(contractDraft);
+    const key = canonicalize(contract);
+    if (cachedURI && cachedURI.key === key) return cachedURI;
+
+    setIsPersisting(true);
+    try {
+      const res = await fetch("/api/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contract),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const msg =
+          (body && Array.isArray(body.issues) && body.issues[0]?.message) ||
+          (body && body.error) ||
+          `Failed to persist contract (HTTP ${res.status})`;
+        notification.error(msg);
+        return null;
+      }
+      const data = (await res.json()) as ContractStorageResponse;
+      const cached: CachedContractURI = { uri: data.uri, hash: data.hash, key };
+      setCachedURI(cached);
+      return cached;
+    } catch (err) {
+      console.error("[create] persistContract failed", err);
+      notification.error("Network error while persisting contract — please retry");
+      return null;
+    } finally {
+      setIsPersisting(false);
+    }
+  }, [cachedURI, contractDraft, draftComplete]);
+
+  // Invalidate the cached URI whenever the contract draft itself changes.
+  // (We only re-POST inside persistContract, but stale URI must be cleared so
+  // the "Create" button visually re-prompts a persist on next click.)
+  useEffect(() => {
+    if (!cachedURI) return;
+    const key = canonicalize(toWorkContract(contractDraft));
+    if (key !== cachedURI.key) setCachedURI(null);
+    // Intentionally omit cachedURI from deps — we only react to draft changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractDraft]);
 
   const handleApprove = async () => {
     if (!escrowAddress) {
@@ -298,7 +489,6 @@ export const CreateProjectForm = () => {
           "Approval sent"
         ),
       );
-      // The useEffect above refetches allowance once the receipt lands.
     } catch (error) {
       console.error("Error approving USDC:", error);
       notification.error("Failed to approve USDC");
@@ -323,6 +513,10 @@ export const CreateProjectForm = () => {
       return;
     }
 
+    // POST the WorkContract (cached after first success).
+    const persisted = await persistContract();
+    if (!persisted) return;
+
     try {
       const descriptions = milestones.map(m => m.description);
       const amounts = milestones.map(m => safeParseUsdc(m.amount));
@@ -335,11 +529,9 @@ export const CreateProjectForm = () => {
 
       const hash = await writeEscrow({
         functionName: "createProject",
-        args: [pm, BigInt(fee), descriptions, amounts, initialAssignees],
+        args: [persisted.uri, pm, BigInt(fee), descriptions, amounts, initialAssignees],
       });
-      if (hash) {
-        setCreateTxHash(hash);
-      }
+      if (hash) setCreateTxHash(hash);
 
       const link = hash ? txLink(hash) : undefined;
       notification.success(
@@ -354,6 +546,7 @@ export const CreateProjectForm = () => {
           "Contract created successfully!"
         ),
       );
+      clearAutosave();
       router.push("/projects");
     } catch (error) {
       console.error("Error creating project:", error);
@@ -367,14 +560,17 @@ export const CreateProjectForm = () => {
 
   return (
     <div className="mx-auto max-w-3xl">
-      {/* Progress Steps */}
+      {restoreCandidate && (
+        <RestoreBanner onRestore={handleRestore} onDiscard={handleDiscardRestore} />
+      )}
+
       <ul className="steps steps-horizontal w-full mb-8">
-        <li className={`step ${step >= 1 ? "step-primary" : ""}`}>Define Contract</li>
-        <li className={`step ${step >= 2 ? "step-primary" : ""}`}>Review Work Unit</li>
-        <li className={`step ${step >= 3 ? "step-primary" : ""}`}>Fund Escrow</li>
+        <li className={`step ${step >= 1 ? "step-primary" : ""}`}>Define contract</li>
+        <li className={`step ${step >= 2 ? "step-primary" : ""}`}>Milestones &amp; routing</li>
+        <li className={`step ${step >= 3 ? "step-primary" : ""}`}>Fund &amp; create</li>
       </ul>
 
-      {/* Step 1: Contract Builder */}
+      {/* Step 1: Chat-first contract definition */}
       {step === 1 && (
         <div className="space-y-6">
           <div className="rounded-lg border border-base-300 bg-base-100 p-6">
@@ -385,8 +581,8 @@ export const CreateProjectForm = () => {
                 </p>
                 <h3 className="mt-2 text-xl font-semibold tracking-tight">Define the thing you are buying</h3>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-base-content/65">
-                  Start with a verifiable work unit: result, authority, proof, acceptance, and payout. Agents come after
-                  the contract is clear.
+                  Chat with the assistant to pin down the result, authority, proof, acceptance, and failure rules.
+                  Edit any field directly in the preview. We&apos;ll add milestones and funding next.
                 </p>
               </div>
               <div className="rounded-lg border border-base-300 bg-base-200 px-3 py-2 text-xs text-base-content/65">
@@ -394,217 +590,255 @@ export const CreateProjectForm = () => {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              {CONTRACT_TEMPLATES.map(template => (
-                <button
-                  key={template.name}
-                  type="button"
-                  className="rounded-lg border border-base-300 bg-base-100 p-3 text-left transition hover:border-primary/40 hover:bg-primary/5"
-                  onClick={() => setContractDraft(template.draft)}
-                >
-                  <span className="text-sm font-semibold">{template.name}</span>
-                  <span className="mt-1 block text-xs leading-relaxed text-base-content/55">
-                    {template.description}
-                  </span>
-                </button>
-              ))}
+            <div className="mt-4 rounded-md border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs text-base-content/75">
+              <span className="font-semibold text-primary">Heads up:</span> you&apos;ll sign 2 transactions —
+              approve USDC, then create the contract. Both pay gas in USDC on Arc.
             </div>
 
-            <div className="mt-6 space-y-4">
-              <ContractTextArea
-                id="contract-result"
-                label="Result"
-                helper="What exact deliverable should the agent produce?"
-                value={contractDraft.result}
-                onChange={value => handleContractDraftChange("result", value)}
-                placeholder="e.g., Deliver a sourced research brief on three BTC prediction markets."
-              />
-              <ContractTextArea
-                id="contract-authority"
-                label="Authority"
-                helper="What can the agent read or do, and what is off limits?"
-                value={contractDraft.authority}
-                onChange={value => handleContractDraftChange("authority", value)}
-                placeholder="e.g., May read public data and Psephos context. Must not trade, spend money, or contact anyone."
-              />
-              <ContractTextArea
-                id="contract-proof"
-                label="Proof"
-                helper="What evidence must be attached so the work can be trusted?"
-                value={contractDraft.proof}
-                onChange={value => handleContractDraftChange("proof", value)}
-                placeholder="e.g., Include source links, market IDs, reasoning notes, and uncertainty flags."
-              />
-              <ContractTextArea
-                id="contract-acceptance"
-                label="Acceptance"
-                helper="How will the client decide whether to release USDC?"
-                value={contractDraft.acceptance}
-                onChange={value => handleContractDraftChange("acceptance", value)}
-                placeholder="e.g., At least five traceable sources; no unsupported claims; final recommendation follows from evidence."
-              />
-              <ContractTextArea
-                id="contract-failure"
-                label="Failure / revision"
-                helper="What should happen if the proof is weak or the result misses the mark?"
-                value={contractDraft.failure}
-                onChange={value => handleContractDraftChange("failure", value)}
-                placeholder="e.g., Missing sources or fabricated facts should be rejected or sent back for one revision."
-              />
-
-              <div className="flex flex-col gap-3 border-t border-base-300 pt-5 sm:flex-row sm:items-end sm:justify-between">
-                <div className="w-full max-w-xs">
-                  <label htmlFor="contract-amount" className="text-xs font-medium uppercase tracking-wide opacity-60">
-                    Payout
-                  </label>
-                  <div className="join mt-2 w-full">
-                    <input
-                      id="contract-amount"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      className="input input-bordered join-item w-full"
-                      value={contractDraft.amount}
-                      onChange={e => handleContractDraftChange("amount", e.target.value)}
-                    />
-                    <span className="join-item flex items-center bg-base-200 px-3 text-sm opacity-70">USDC</span>
-                  </div>
-                </div>
-                <button className="btn btn-primary" onClick={handleUseContractDraft}>
-                  Use this contract
-                </button>
+            <div className="mt-5">
+              <p className="text-[11px] uppercase tracking-wide font-semibold text-base-content/55 mb-2">
+                Start from a template (optional)
+              </p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {CONTRACT_TEMPLATES.map(template => (
+                  <button
+                    key={template.name}
+                    type="button"
+                    className="rounded-lg border border-base-300 bg-base-100 p-3 text-left transition hover:border-primary/40 hover:bg-primary/5"
+                    onClick={() => handlePickTemplate(template)}
+                  >
+                    <span className="text-sm font-semibold">{template.name}</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-base-content/55">{template.blurb}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
 
-          <details className="rounded-lg border border-base-300 bg-base-100">
+          <ContractChat
+            key={chatResetKey}
+            initialDraft={contractDraft}
+            onDraftChange={handleChatDraftChange}
+            onReady={handleChatReady}
+          />
+
+          <details
+            className="rounded-lg border border-base-300 bg-base-100"
+            open={splitterExpanded}
+            onToggle={e => setSplitterExpanded((e.currentTarget as HTMLDetailsElement).open)}
+          >
             <summary className="cursor-pointer px-5 py-4 text-sm font-semibold">
-              Optional: split a rough project with AI
+              Need multiple milestones? Split a rough project with AI
             </summary>
             <div className="border-t border-base-300 p-5">
               <AIMilestoneSplitter onAccept={handleSuggestionsGenerated} />
             </div>
           </details>
-
-          <div className="text-center">
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                setMilestones([{ description: "", amount: "10", assignee: "" }]);
-                setStep(2);
-              }}
-            >
-              Start from a blank milestone
-            </button>
-          </div>
         </div>
       )}
 
-      {/* Step 2: Edit Milestones */}
+      {/* Step 2: Milestones + collapsed routing */}
       {step === 2 && (
         <div className="space-y-6">
           <div className="rounded-lg border border-base-300 bg-base-100 p-6">
-            <div className="flex justify-between items-center">
+            <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold tracking-tight">Work units</h3>
+                <h3 className="text-lg font-semibold tracking-tight">Milestones</h3>
                 <p className="mt-1 text-sm text-base-content/60">
-                  Keep the first contract narrow enough for a human to verify before payout.
+                  Each milestone is a short deliverable summary (≤ {MILESTONE_DESCRIPTION_RECOMMENDED} chars). The
+                  full work contract lives off-chain.
                 </p>
               </div>
-              <label className="flex cursor-pointer items-center gap-2">
-                <span className="text-sm">Pre-assign worker</span>
-                <input
-                  type="checkbox"
-                  className="toggle toggle-sm toggle-primary"
-                  checked={showAssignees}
-                  onChange={e => setShowAssignees(e.target.checked)}
-                />
-              </label>
             </div>
 
-            <div className="space-y-4">
-              {milestones.map((milestone, index) => (
-                <div key={index} className="flex gap-4 items-start">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-base-300 text-sm font-bold">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <textarea
-                      className="textarea textarea-bordered w-full min-h-[3rem]"
-                      rows={milestone.description.includes("\n") ? 5 : 2}
-                      placeholder="Work contract terms"
-                      value={milestone.description}
-                      onChange={e => handleMilestoneChange(index, "description", e.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <div className="join flex-1">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          className="input input-bordered join-item w-full"
-                          placeholder="10"
-                          value={milestone.amount}
-                          onChange={e => handleMilestoneChange(index, "amount", e.target.value)}
-                        />
-                        <span className="join-item flex items-center bg-base-200 px-3 text-sm opacity-70">USDC</span>
-                      </div>
-                      <button
-                        className="btn btn-ghost btn-square text-error"
-                        onClick={() => handleRemoveMilestone(index)}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="h-5 w-5"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                          />
-                        </svg>
-                      </button>
+            <div className="mt-5 space-y-4">
+              {milestones.map((milestone, index) => {
+                const descLen = milestone.description.length;
+                const descOver = descLen > MILESTONE_DESCRIPTION_RECOMMENDED;
+                const descHardOver = descLen > MILESTONE_DESCRIPTION_MAX;
+                return (
+                  <div key={index} className="flex gap-4 items-start">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-base-300 text-sm font-bold">
+                      {index + 1}
                     </div>
-                    {showAssignees && (
-                      <input
-                        type="text"
-                        className={`input input-bordered input-sm w-full ${
-                          milestone.assignee && !isAddress(milestone.assignee) ? "input-error" : ""
-                        }`}
-                        placeholder="Verified worker address (optional) 0x..."
-                        value={milestone.assignee}
-                        onChange={e => handleMilestoneChange(index, "assignee", e.target.value)}
-                      />
-                    )}
+                    <div className="flex-1 space-y-2">
+                      <div className="space-y-1">
+                        <textarea
+                          className={`textarea textarea-bordered w-full min-h-[3rem] leading-relaxed ${
+                            descHardOver ? "textarea-error" : ""
+                          }`}
+                          rows={2}
+                          placeholder="Short deliverable summary (e.g., 30 qualified B2B leads + sources)"
+                          value={milestone.description}
+                          maxLength={MILESTONE_DESCRIPTION_MAX}
+                          onChange={e => handleMilestoneChange(index, "description", e.target.value)}
+                        />
+                        <div className="flex justify-between text-[11px]">
+                          <span className="opacity-50">
+                            Keep it tight — the full work contract is captured separately.
+                          </span>
+                          <span
+                            className={
+                              descHardOver
+                                ? "text-error font-semibold"
+                                : descOver
+                                  ? "text-warning"
+                                  : "opacity-60"
+                            }
+                          >
+                            {descLen} / {MILESTONE_DESCRIPTION_RECOMMENDED}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="join flex-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            className="input input-bordered join-item w-full"
+                            placeholder="10"
+                            value={milestone.amount}
+                            onChange={e => handleMilestoneChange(index, "amount", e.target.value)}
+                          />
+                          <span className="join-item flex items-center bg-base-200 px-3 text-sm opacity-70">USDC</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-square text-error"
+                          onClick={() => handleRemoveMilestone(index)}
+                          aria-label="Remove milestone"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="h-5 w-5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-baseline justify-between">
+                          <label
+                            className="text-[11px] uppercase tracking-wide font-semibold text-base-content/55"
+                            htmlFor={`assignee-${index}`}
+                          >
+                            Pre-assign worker (optional)
+                          </label>
+                          <Link
+                            href="/agents"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="link link-hover text-[11px] opacity-70"
+                          >
+                            Browse agents ↗
+                          </Link>
+                        </div>
+                        <input
+                          id={`assignee-${index}`}
+                          type="text"
+                          className={`input input-bordered input-sm w-full ${
+                            milestone.assignee && !isAddress(milestone.assignee) ? "input-error" : ""
+                          }`}
+                          placeholder="0x... (leave empty to assign later)"
+                          value={milestone.assignee}
+                          onChange={e => handleMilestoneChange(index, "assignee", e.target.value)}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+              {milestones.length === 0 && (
+                <p className="text-sm text-base-content/55 italic">
+                  No milestones yet — add one below to get started.
+                </p>
+              )}
             </div>
 
-            <button className="btn btn-outline btn-sm mt-4" onClick={handleAddMilestone}>
-              + Add Work Unit
+            <button type="button" className="btn btn-outline btn-sm mt-4" onClick={handleAddMilestone}>
+              + Add milestone
             </button>
 
             <div className="divider" />
 
-            <div className="flex justify-between items-center">
-              <span className="font-semibold">Total Amount:</span>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold">Total amount</span>
               <span className="text-xl font-bold">{totalUsdcDisplay} USDC</span>
             </div>
           </div>
 
+          {/* Routing (optional) — moved out of fund step. */}
+          <details
+            className="rounded-lg border border-base-300 bg-base-100"
+            open={routingExpanded}
+            onToggle={e => setRoutingExpanded((e.currentTarget as HTMLDetailsElement).open)}
+          >
+            <summary className="cursor-pointer px-5 py-4 text-sm font-semibold">
+              Routing (optional) — add a PM / router
+            </summary>
+            <div className="space-y-4 border-t border-base-300 p-5">
+              <p className="text-xs text-base-content/65">
+                A PM can assign workers, review proof, and earn commission when the work settles. Leave both fields
+                empty to act as PM yourself.
+              </p>
+              <div className="space-y-2">
+                <label htmlFor="pm-address" className="text-sm font-medium">
+                  PM address
+                </label>
+                <input
+                  id="pm-address"
+                  type="text"
+                  className={`input input-bordered w-full ${
+                    pmAddress && !isAddress(pmAddress) ? "input-error" : ""
+                  }`}
+                  placeholder="0x... (leave empty for no PM)"
+                  value={pmAddress}
+                  onChange={e => setPmAddress(e.target.value)}
+                />
+              </div>
+              {pmAddress && isAddress(pmAddress) && (
+                <div className="space-y-2">
+                  <label htmlFor="pm-fee" className="text-sm font-medium">
+                    PM fee
+                  </label>
+                  <input
+                    id="pm-fee"
+                    type="range"
+                    min="100"
+                    max="2000"
+                    step="100"
+                    className="range range-primary"
+                    value={pmFeeBps}
+                    onChange={e => setPmFeeBps(e.target.value)}
+                  />
+                  <div className="flex justify-between text-xs px-2">
+                    <span>1%</span>
+                    <span className="font-bold">{pmFeePercent}%</span>
+                    <span>20%</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </details>
+
           <div className="flex justify-between">
-            <button className="btn btn-ghost" onClick={() => setStep(1)}>
+            <button type="button" className="btn btn-ghost" onClick={() => setStep(1)}>
               Back
             </button>
             <button
+              type="button"
               className="btn btn-primary"
               onClick={() => setStep(3)}
-              disabled={milestones.length === 0 || milestones.some(m => !m.description.trim())}
+              disabled={!isMilestonesValid || !isPmValid}
             >
               Continue
             </button>
@@ -612,7 +846,7 @@ export const CreateProjectForm = () => {
         </div>
       )}
 
-      {/* Step 3: Configure & Create */}
+      {/* Step 3: Fund + create */}
       {step === 3 && (
         <div className="space-y-6">
           {!isEscrowDeployed && (
@@ -637,86 +871,16 @@ export const CreateProjectForm = () => {
             </div>
           )}
 
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h3 className="card-title">Routing & review</h3>
-
-              <div className="alert alert-info">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  className="stroke-current shrink-0 w-6 h-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <div>
-                  <p className="text-sm">Fund the contract first, then route it to a verified worker or PM.</p>
-                  <p className="text-xs opacity-70">
-                    For the MVP, avoid auto-assignment unless you know the worker daemon is actually running.
-                  </p>
-                </div>
-              </div>
-
-              <div className="divider">Optional: Project Manager / Router</div>
-
-              <div className="space-y-2">
-                <label htmlFor="pm-address" className="text-sm font-medium">
-                  PM Address
-                </label>
-                <input
-                  id="pm-address"
-                  type="text"
-                  className={`input input-bordered w-full ${pmAddress && !isAddress(pmAddress) ? "input-error" : ""}`}
-                  placeholder="0x... (leave empty for no PM)"
-                  value={pmAddress}
-                  onChange={e => setPmAddress(e.target.value)}
-                />
-                <p className="text-xs opacity-70">
-                  A PM can assign workers, review proof, and earn commission when the work settles.
-                </p>
-              </div>
-
-              {pmAddress && isAddress(pmAddress) && (
-                <div className="space-y-2">
-                  <label htmlFor="pm-fee" className="text-sm font-medium">
-                    PM Fee (%)
-                  </label>
-                  <input
-                    id="pm-fee"
-                    type="range"
-                    min="100"
-                    max="2000"
-                    step="100"
-                    className="range range-primary"
-                    value={pmFeeBps}
-                    onChange={e => setPmFeeBps(e.target.value)}
-                  />
-                  <div className="flex justify-between text-xs px-2">
-                    <span>1%</span>
-                    <span className="font-bold">{pmFeePercent}%</span>
-                    <span>20%</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           <div className="card bg-base-200">
             <div className="card-body">
               <h3 className="card-title">Summary</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm opacity-70">Work units</p>
+                  <p className="text-sm opacity-70">Milestones</p>
                   <p className="font-bold">{milestones.length}</p>
                 </div>
                 <div>
-                  <p className="text-sm opacity-70">Total Value</p>
+                  <p className="text-sm opacity-70">Total value</p>
                   <p className="font-bold">{totalUsdcDisplay} USDC</p>
                 </div>
                 <div>
@@ -725,7 +889,7 @@ export const CreateProjectForm = () => {
                 </div>
                 {pmAddress && isAddress(pmAddress) && (
                   <div>
-                    <p className="text-sm opacity-70">PM Fee</p>
+                    <p className="text-sm opacity-70">PM fee</p>
                     <p className="font-bold">{pmFeePercent}%</p>
                   </div>
                 )}
@@ -755,18 +919,25 @@ export const CreateProjectForm = () => {
                     {isLoadingUsdcAddress ? "Resolving..." : usdcAddress ? shortAddress(usdcAddress) : "Not found"}
                   </p>
                 </div>
+                {cachedURI && (
+                  <div>
+                    <p className="text-sm opacity-70">Contract URI</p>
+                    <p className="font-mono text-xs font-bold break-all">{cachedURI.uri}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Two-step USDC flow */}
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
               <h3 className="card-title">Fund the escrow</h3>
               <p className="text-sm opacity-70">
-                Funding takes two on-chain steps: approve the escrow to pull{" "}
-                <span className="font-semibold">{totalUsdcDisplay} USDC</span>, then create the contract. Both
-                transactions pay gas in USDC on Arc; localhost uses MockUSDC for deterministic E2E.
+                Funding takes two on-chain steps: <span className="font-semibold">approve</span> the escrow to pull{" "}
+                <span className="font-semibold">{totalUsdcDisplay} USDC</span>, then{" "}
+                <span className="font-semibold">create</span> the contract. The work contract JSON is persisted
+                off-chain first and referenced on-chain by a short URI. Both transactions pay gas in USDC on Arc;
+                localhost uses MockUSDC for deterministic E2E.
               </p>
 
               {connectedAddress &&
@@ -805,19 +976,22 @@ export const CreateProjectForm = () => {
           </div>
 
           <div className="flex justify-between gap-2">
-            <button className="btn btn-ghost" onClick={() => setStep(2)}>
+            <button type="button" className="btn btn-ghost" onClick={() => setStep(2)}>
               Back
             </button>
             {allowanceSufficient ? (
               <button
+                type="button"
                 className="btn btn-primary"
                 onClick={handleCreate}
-                disabled={!isValidForm() || !isEscrowDeployed || !usdcReady || isCreating}
+                disabled={
+                  !isValidForm() || !isEscrowDeployed || !usdcReady || isCreating || isPersisting
+                }
               >
-                {isCreating ? (
+                {isCreating || isPersisting ? (
                   <>
                     <span className="loading loading-spinner loading-sm" />
-                    Creating…
+                    {isPersisting ? "Persisting contract…" : "Creating…"}
                   </>
                 ) : (
                   `Create contract (${totalUsdcDisplay} USDC)`
@@ -825,6 +999,7 @@ export const CreateProjectForm = () => {
               </button>
             ) : (
               <button
+                type="button"
                 className="btn btn-primary"
                 onClick={handleApprove}
                 disabled={
@@ -853,34 +1028,19 @@ export const CreateProjectForm = () => {
   );
 };
 
-const ContractTextArea = ({
-  id,
-  label,
-  helper,
-  value,
-  onChange,
-  placeholder,
-}: {
-  id: string;
-  label: string;
-  helper: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}) => (
-  <div className="space-y-2">
-    <div>
-      <label htmlFor={id} className="text-xs font-medium uppercase tracking-wide opacity-60">
-        {label}
-      </label>
-      <p className="mt-1 text-xs text-base-content/55">{helper}</p>
+const RestoreBanner = ({ onRestore, onDiscard }: { onRestore: () => void; onDiscard: () => void }) => (
+  <div className="mb-6 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div className="text-sm">
+      <span className="font-semibold">Previous draft found.</span>{" "}
+      <span className="opacity-75">Pick up where you left off?</span>
     </div>
-    <textarea
-      id={id}
-      className="textarea textarea-bordered min-h-[5rem] w-full resize-y leading-relaxed"
-      placeholder={placeholder}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-    />
+    <div className="flex gap-2">
+      <button type="button" className="btn btn-sm btn-ghost" onClick={onDiscard}>
+        Discard
+      </button>
+      <button type="button" className="btn btn-sm btn-primary" onClick={onRestore}>
+        Restore previous draft
+      </button>
+    </div>
   </div>
 );
