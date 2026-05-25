@@ -364,6 +364,12 @@ const deployedContracts = {
               name: "milestoneCount",
               type: "uint256",
             },
+            {
+              indexed: false,
+              internalType: "string",
+              name: "contractURI",
+              type: "string",
+            },
           ],
           name: "ProjectCreated",
           type: "event",
@@ -507,6 +513,11 @@ const deployedContracts = {
         },
         {
           inputs: [
+            {
+              internalType: "string",
+              name: "contractURI",
+              type: "string",
+            },
             {
               internalType: "address",
               name: "pm",
@@ -829,6 +840,11 @@ const deployedContracts = {
               name: "milestoneCount",
               type: "uint256",
             },
+            {
+              internalType: "string",
+              name: "contractURI",
+              type: "string",
+            },
           ],
           stateMutability: "view",
           type: "function",
@@ -934,6 +950,11 @@ const deployedContracts = {
               internalType: "bool",
               name: "active",
               type: "bool",
+            },
+            {
+              internalType: "string",
+              name: "contractURI",
+              type: "string",
             },
           ],
           stateMutability: "view",
