@@ -26,7 +26,7 @@ configure_caddy() {
     return
   fi
 
-  local web_container web_name web_network
+  local web_container web_name web_network caddy_network_mode upstream caddy_gateway
   web_container="$(docker compose -f "$COMPOSE_FILE" ps -q web)"
   if [ -z "$web_container" ]; then
     log "web container not found; cannot configure Caddy"
@@ -40,13 +40,26 @@ configure_caddy() {
     exit 1
   fi
 
-  if ! docker inspect -f '{{json .NetworkSettings.Networks}}' "$CADDY_CONTAINER" | grep -Fq "\"$web_network\""; then
-    log "connecting $CADDY_CONTAINER to docker network $web_network"
-    docker network connect "$web_network" "$CADDY_CONTAINER"
+  caddy_network_mode="$(docker inspect -f '{{.HostConfig.NetworkMode}}' "$CADDY_CONTAINER")"
+  if [ "$caddy_network_mode" = "host" ]; then
+    upstream="127.0.0.1:$CHORD_NEXT_PORT"
+    log "$CADDY_CONTAINER uses host networking; using host upstream $upstream"
+  elif [[ "$caddy_network_mode" == container:* ]]; then
+    caddy_gateway="$(
+      docker exec "$CADDY_CONTAINER" sh -c "ip route 2>/dev/null | awk '/default/ {print \$3; exit}' || true" 2>/dev/null || true
+    )"
+    upstream="${caddy_gateway:-172.17.0.1}:$CHORD_NEXT_PORT"
+    log "$CADDY_CONTAINER shares another network namespace; using host-gateway upstream $upstream"
+  else
+    upstream="$web_name:3000"
+    if ! docker inspect -f '{{json .NetworkSettings.Networks}}' "$CADDY_CONTAINER" | grep -Fq "\"$web_network\""; then
+      log "connecting $CADDY_CONTAINER to docker network $web_network"
+      docker network connect "$web_network" "$CADDY_CONTAINER"
+    fi
   fi
 
-  log "configuring Caddy route $CADDY_DOMAIN -> $web_name:3000"
-  docker exec -i -u 0 "$CADDY_CONTAINER" sh -s -- "$CADDY_DOMAIN" "$web_name" "$CADDY_FILE" <<'SCRIPT'
+  log "configuring Caddy route $CADDY_DOMAIN -> $upstream"
+  docker exec -i -u 0 "$CADDY_CONTAINER" sh -s -- "$CADDY_DOMAIN" "$upstream" "$CADDY_FILE" <<'SCRIPT'
 set -eu
 
 domain="$1"
@@ -65,7 +78,7 @@ cat >> "$tmp" <<EOF
 # BEGIN CHORD MANAGED
 $domain {
 	encode zstd gzip
-	reverse_proxy $upstream:3000
+	reverse_proxy $upstream
 }
 # END CHORD MANAGED
 EOF
