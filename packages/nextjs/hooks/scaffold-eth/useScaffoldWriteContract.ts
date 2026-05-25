@@ -71,7 +71,7 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
     }
   }, [configOrName]);
 
-  const { chain: accountChain } = useAccount();
+  const { chainId: accountChainId } = useAccount();
   const writeTx = useTransactor();
   const [isMining, setIsMining] = useState(false);
 
@@ -95,12 +95,12 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
       return;
     }
 
-    if (!accountChain?.id) {
+    if (!accountChainId) {
       notification.error("Please connect your wallet");
       return;
     }
 
-    if (accountChain?.id !== selectedNetwork.id) {
+    if (accountChainId !== selectedNetwork.id) {
       notification.error(`Wallet is connected to the wrong network. Please switch to ${selectedNetwork.name}`);
       return;
     }
@@ -156,12 +156,12 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
       notification.error("Target Contract is not deployed, did you forget to run `yarn deploy`?");
       return;
     }
-    if (!accountChain?.id) {
+    if (!accountChainId) {
       notification.error("Please connect your wallet");
       return;
     }
 
-    if (accountChain?.id !== selectedNetwork.id) {
+    if (accountChainId !== selectedNetwork.id) {
       notification.error(`Wallet is connected to the wrong network. Please switch to ${selectedNetwork.name}`);
       return;
     }
