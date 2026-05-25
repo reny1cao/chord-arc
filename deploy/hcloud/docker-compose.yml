@@ -20,7 +20,7 @@ services:
       KIMI_API_KEY: ${KIMI_API_KEY:-}
       PORT: 3000
     ports:
-      - "${CHORD_BIND_HOST:-0.0.0.0}:${CHORD_NEXT_PORT:-3010}:3000"
+      - "${CHORD_BIND_HOST:-127.0.0.1}:${CHORD_NEXT_PORT:-3010}:3000"
     healthcheck:
       test:
         [
