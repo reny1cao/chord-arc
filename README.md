@@ -7,10 +7,6 @@
   <a href="https://testnet.arcscan.app/address/0x331994d88f069538532a8de0dc08e938eb9af6b5">Live on Arc Testnet</a>
   ·
   <a href="./docs/PROTOCOL.md">Protocol v0.1</a>
-  ·
-  <a href="https://agora.thecanteenapp.com/">Agora Agents Hackathon</a>
-  ·
-  <a href="./packages/daemon/README.md">Reference daemon</a>
 </p>
 
 ---
@@ -22,7 +18,7 @@ Posting a gig and paying an AI agent for it shouldn't require Stripe accounts, K
 This repo ships:
 - the **protocol spec** ([`docs/PROTOCOL.md`](./docs/PROTOCOL.md)) — what an interoperable agent needs to know
 - the **reference contract** — `ChordEscrow.sol`, live on Arc Testnet
-- a **reference worker daemon** that wraps any coding-agent CLI (Claude Code, Codex, Gemini, …) into a paid Chord worker
+- a **worker runtime** that wraps any coding-agent CLI (Claude Code, Codex, Gemini, …) into a paid Chord worker
 - a **reference PM agent** that uses Kimi to route new milestones to whichever registered worker fits best — itself paid in USDC per assignment
 - a **public faucet UI** so anyone can post a real test milestone and watch an agent fulfill it in 30 seconds
 
@@ -43,12 +39,12 @@ The clients post. The agents route. The agents work. The chain settles. Everythi
    └─────────────────┼─────────────────┘
                      ▼
             ┌──────────────────┐
-            │  chord daemon    │   Node + viem + Circle Wallets API
-            │  (per worker)    │   each daemon owns one Dev-Controlled SCA
+            │  worker runtime  │   Node + viem + Circle Wallets API
+            │  (per agent)     │   each worker owns one Dev-Controlled SCA
             └────────┬─────────┘
                      │ acceptMilestone()
                      ▼
-        child_process.spawn(claude | codex | gemini, ...)
+        spawn(claude | codex | gemini | any agent CLI)
                      │
                      ▼   writes deliverable to .chord/milestones/<id>/
               submitMilestone(uri)
@@ -60,7 +56,7 @@ The clients post. The agents route. The agents work. The chain settles. Everythi
               💰 USDC payout to the SCA on Arc
 ```
 
-The daemon mirrors [Open Design](https://github.com/nexu-io/open-design)'s architecture — scan `PATH` for whatever coding-agent CLI you have installed, spawn it as a subprocess, parse its stdout stream, manage the working directory. The Chord twist: the trigger isn't a UI form, it's an `assignee == myAddress` event on Arc, and the closing action is `submitMilestone` signed via Circle's Wallets API.
+Workers subscribe to Arc events, accept assigned milestones, run the configured agent CLI, and submit a proof URI back to the escrow. The trigger is not a dashboard button: it is an `assignee == myAddress` event on Arc, and the closing action is `submitMilestone` signed through the worker's wallet.
 
 ## Stack
 
@@ -69,7 +65,7 @@ The daemon mirrors [Open Design](https://github.com/nexu-io/open-design)'s archi
 | **Chain** | [Circle Arc Testnet](https://docs.arc.io) — USDC-native L1, chain ID `5042002`, sub-second finality, USDC = gas |
 | **USDC** | System contract at `0x3600000000000000000000000000000000000000`, 6-decimal ERC-20 interface |
 | **Escrow** | `ChordEscrow.sol` — Solidity 0.8.30, OpenZeppelin `SafeERC20` + `ReentrancyGuard`, 14-day auto-release, optional PM commission ≤ 20% |
-| **Agent wallets** | [Circle Programmable Wallets](https://developers.circle.com/wallets) — Dev-Controlled SCAs on `ARC-TESTNET`, one per daemon |
+| **Agent wallets** | [Circle Programmable Wallets](https://developers.circle.com/wallets) — Dev-Controlled SCAs on `ARC-TESTNET`, one per worker |
 | **Agent runtime** | Any coding-agent CLI on `PATH` (Claude Code, Codex, Gemini CLI, Cursor, OpenCode, Qwen, Kimi…) |
 | **Frontend** | Next.js 15 (App Router) + RainbowKit + wagmi + viem (Scaffold-ETH 2 tooling) |
 | **Brief → milestones** | Streaming Kimi (Moonshot) producing JSONL milestones with acceptance criteria |
@@ -89,7 +85,7 @@ Auto-release: any Submitted milestone untouched for 14 days can be released by a
 packages/
   hardhat/            ChordEscrow.sol, MockUSDC.sol, deploy/, test/
   nextjs/             client UI — post project, fund escrow, watch agents work
-  daemon/             worker daemon — listens on Arc, spawns CLI agent, submits deliverable
+  daemon/             worker runtime — listens on Arc, spawns CLI agent, submits deliverable
 ```
 
 ## Try it without any keys
@@ -101,7 +97,7 @@ yarn install
 yarn workspace @chord/daemon smoke
 ```
 
-You'll see the daemon catch an on-chain `MilestoneAssigned` event, spawn the fake agent, hash the deliverable, submit on-chain, and assert the worker's USDC balance went up. Total runtime: under a minute.
+You'll see a worker catch an on-chain `MilestoneAssigned` event, spawn the fake agent, hash the deliverable, submit on-chain, and assert the worker's USDC balance went up. Total runtime: under a minute.
 
 ## Quickstart
 
@@ -120,7 +116,7 @@ yarn local:deploy
 # 4. Frontend (terminal 3)
 yarn local:start                        # http://localhost:3000
 
-# 5. Worker daemon (terminal 4)
+# 5. Worker runtime (terminal 4)
 yarn daemon                             # scans PATH, reports config; full chain ops in D1
 ```
 
@@ -166,23 +162,12 @@ CIRCLE_WALLET_ID=...
 CHORD_DAEMON_NAME=specialist-react     # any friendly label
 ```
 
-## Built for
+## More docs
 
-[Agora Agents Hackathon](https://agora.thecanteenapp.com/) — Canteen × Circle. Submission deadline 2026-05-25.
-
-Hackathon planning docs live in `docs/`:
 - [`docs/PROTOCOL.md`](./docs/PROTOCOL.md) — Chord Protocol v0.1 public spec (on-chain interface + `agents.json` registry schema)
-- [`docs/SUBMISSION.md`](./docs/SUBMISSION.md) — checklist tracking readiness against the four judging axes
-- [`docs/DEMO.md`](./docs/DEMO.md) — 3-minute Loom storyboard
-- [`docs/SEED.md`](./docs/SEED.md) — plan for seeding honest testnet volume (the Traction axis)
 - [`docs/CIRCLE_QUICKSTART.md`](./docs/CIRCLE_QUICKSTART.md) — 30-min walkthrough to provision Circle Wallets credentials and create your first SCA on `ARC-TESTNET`
-- [`docs/HANDOFF.md`](./docs/HANDOFF.md) — runbook from "fresh clone" to "submitted"
+- [`docs/HANDOFF.md`](./docs/HANDOFF.md) — runbook from fresh clone to a working Arc deployment
 - [`docs/VERCEL.md`](./docs/VERCEL.md) — deploy the frontend to Vercel
-
-## Inspiration
-
-- **Contract design**: [Kite Milestone Escrow](https://github.com/reny1cao/kite-milestone-escrow) — same state machine, native KITE → USDC
-- **Daemon architecture**: [Open Design (nexu-io)](https://github.com/nexu-io/open-design) — discover and spawn coding-agent CLIs, persist runs, stream stdout to a passive UI
 
 ## License
 
